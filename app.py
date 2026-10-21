@@ -100,9 +100,6 @@ def mentor():
     if mode not in {"hint", "debug", "explain", "improve"}:
         mode = "hint"
 
-    if "mentor_uses" not in request.environ.get("werkzeug.request", {}):
-        pass
-
     result = analyze_locally(code, question, mode)
     result["message"] = (
         "This first version works without an AI API key and never runs the code you submit. "
