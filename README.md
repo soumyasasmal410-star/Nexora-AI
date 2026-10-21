@@ -49,3 +49,22 @@ The OpenAI API may incur usage charges. Set API spending limits/alerts in your p
 
 ## Security notes
 Never put provider API keys in frontend JavaScript or commit secrets. This app deliberately does not use `eval` or execute submitted Python. Keep input limits and add a persistent rate limiter before a public launch.
+
+## Secure login and signup
+
+The app includes password-based signup/login, a protected dashboard, CSRF checks on authentication forms, password hashing, secure session-cookie settings on Render, and basic per-IP rate limits for login/signup. Email verification and password reset are not implemented yet.
+
+### Render production setup (required before relying on accounts)
+
+1. In the Render dashboard, create a PostgreSQL database for this project. Check the current plan, price, and expiry/retention policy before choosing a plan.
+2. Open the database page and copy its **Internal Database URL**. Do not publish it or commit it to GitHub.
+3. Open the Nexora AI web service → **Environment** and add:
+   - `DATABASE_URL`: the PostgreSQL Internal Database URL from Render.
+   - `SECRET_KEY`: a strong random secret (for example, generate one locally with `python -c "import secrets; print(secrets.token_hex(32))"`). Never share it or commit it.
+4. Save changes and wait for the service to deploy/restart. The app creates the user table automatically if it does not exist.
+5. Visit `/signup`, create a test account with a unique email and a strong password, then confirm the dashboard opens. Log out and test `/login` and protected `/dashboard`.
+6. Check that the app still loads at `/`, the Code Mentor works, and the Python Practice section works.
+
+**Important:** If `DATABASE_URL` is absent, the app uses local SQLite as a development fallback. On a typical Render web service filesystem, that file is not a reliable persistent production database. Do not use fallback SQLite for real customer accounts. Set `DATABASE_URL` to Render PostgreSQL before inviting users. Keep the database URL and `SECRET_KEY` private.
+
+Passwords are stored as Werkzeug scrypt hashes, never as plaintext. Signup requires 12–128 characters. Login/signup are rate-limited in-process; for a high-traffic public launch, move rate limiting to shared persistent storage (such as Redis) and add email verification, password reset, monitoring, and a database migration workflow.
