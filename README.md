@@ -1,2 +1,2 @@
-# CodeSaathi-AI
-CodeSaathi AI is an AI-powered coding assistant that helps students understand Python errors, debug code step by step, learn programming concepts, and improve their coding skills.
+# Nexora AI
+Ek broad, modern tech brand jo future mein AI coding assistant, resume builder, code playground, study tools, AI content tools aur premium subscriptions sabko accommodate kar sakta hai.
