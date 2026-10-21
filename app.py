@@ -121,6 +121,61 @@ def analyze_locally(code: str, question: str, mode: str) -> dict:
     if any(word in q for word in ("loop", "iterate", "repeat")):
         add_hint("For loops are useful when iterating over items; while loops are useful when repeating until a condition changes.")
 
+    diagnostics = []
+    if syntax_note.startswith("Syntax error"):
+        diagnostics.append(syntax_note)
+    if tree is not None:
+        if re.search(r"\binput\s*\(", code) and re.search(r"\b(?:int|float)\s*\(\s*input\s*\(", code) is None:
+            diagnostics.append("Potential type issue: input() returns a string. Convert it to int() or float() before doing numeric arithmetic.")
+        if re.search(r"\bexcept\s*:", code):
+            diagnostics.append("Broad exception handling: bare except can hide unexpected errors. Catch the specific exception you expect.")
+        if re.search(r"\bwhile\s+True\s*:", code) and not re.search(r"\bbreak\b", code):
+            diagnostics.append("Possible infinite loop: while True has no visible break in this snippet. Make sure there is a clear exit path.")
+        if re.search(r"\b\w+\.sort\s*\(", code) and re.search(r"=\s*\w+\.sort\s*\(", code):
+            diagnostics.append("Common sorting bug: list.sort() returns None. Use sorted(items) if you need a new sorted list.")
+        if re.search(r"\b\w+\s*\[\s*len\s*\(\s*\w+\s*\)\s*\]", code):
+            diagnostics.append("Possible index error: a list's last valid index is len(items) - 1. Use items[-1] for the last item.")
+    if not diagnostics:
+        diagnostics.append("No high-confidence issue found by the offline checks. Static analysis cannot detect every runtime or logic bug.")
+
+    examples = []
+    if tree is not None:
+        if re.search(r"\bprint\s*\(", code):
+            examples.append({
+                "title": "How print() works",
+                "code": 'name = "Mina"\nprint("Hello", name)',
+                "result": "Hello Mina",
+                "explanation": "print() displays the values you pass to it. Multiple values are separated by a space by default."
+            })
+        if re.search(r"\binput\s*\(", code):
+            examples.append({
+                "title": "Convert input before maths",
+                "code": 'age_text = "18"\nage = int(age_text)\nprint(age + 1)',
+                "result": "19",
+                "explanation": "Text such as \"18\" must be converted to an integer before numeric addition. This example uses a fixed string so it does not wait for keyboard input."
+            })
+        if re.search(r"\bfor\b|\bwhile\b", code):
+            examples.append({
+                "title": "Trace a loop",
+                "code": "for number in range(3):\n    print(number)",
+                "result": "0\n1\n2",
+                "explanation": "range(3) produces 0, 1, and 2. The loop body runs once for each value."
+            })
+        if re.search(r"\bif\b", code):
+            examples.append({
+                "title": "An if condition",
+                "code": "score = 75\nif score >= 50:\n    print('Pass')",
+                "result": "Pass",
+                "explanation": "Python checks the condition. Because 75 is greater than or equal to 50, the indented block runs."
+            })
+    if not examples:
+        examples.append({
+            "title": "A tiny example",
+            "code": "total = 2 + 3\nprint(total)",
+            "result": "5",
+            "explanation": "Python calculates the expression on the right side of =, stores the value in total, then print() displays it."
+        })
+
     if mode == "debug":
         headline = "Offline debugging guide"
         next_steps = [
@@ -156,6 +211,8 @@ def analyze_locally(code: str, question: str, mode: str) -> dict:
         "headline": headline,
         "syntax": syntax_note,
         "hints": hints[:6],
+        "diagnostics": diagnostics[:5],
+        "examples": examples[:4],
         "next_steps": next_steps,
         "question": question.strip() or "No extra question supplied.",
         "offline": True,
