@@ -8,8 +8,9 @@ Nexora AI is a standalone AI-powered tools platform for students, developers, an
 - Responsive dark/neon landing page and tool dashboard.
 - Python syntax validation and beginner-friendly guidance.
 - Modes for hints, debugging, code explanation, and improvement suggestions.
-- Optional server-side OpenAI Responses API integration.
-- Local syntax/rule-based fallback when the API key is missing or the AI request fails.
+- Free offline mode by default, with AST-based syntax checks and common-pattern hints.
+- Optional server-side OpenAI Responses API integration, disabled unless explicitly enabled.
+- Local guidance never executes submitted code.
 - Does not execute submitted code.
 - Health endpoint at `/health`.
 
@@ -31,7 +32,8 @@ Create a **new Web Service** from this repository, not the existing My Portfolio
 - Start command: `gunicorn app:app`
 - Health check path: `/health`
 
-For AI mode, add these environment variables in Render (never commit secrets):
+For the default free/offline mode, no API key or paid API credits are needed. To opt into AI mode later, add these environment variables in Render (never commit secrets):
+- ENABLE_AI_MENTOR: set to true to enable model calls; default is false.
 - OPENAI_API_KEY: your OpenAI API key.
 - OPENAI_MODEL: optional model override; defaults to gpt-5-mini.
 
