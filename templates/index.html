@@ -58,6 +58,35 @@
       <div id="result" class="result-panel" aria-live="polite"><div class="result-placeholder"><span>✳</span><b>Your guidance will appear here</b><p>Submit a small Python snippet to get started.</p></div></div>
     </div>
   </div>
+  <div class="practice-panel" id="python-practice">
+    <div class="practice-heading">
+      <div><div class="eyebrow">PRACTISE WITHOUT PRESSURE</div><h3>Python practice mode.</h3></div>
+      <p>Quick exercises with instant feedback. Answers are checked locally; no code is executed or sent to an AI service.</p>
+    </div>
+    <div class="practice-card">
+      <label for="practiceChallenge">Choose a challenge</label>
+      <select id="practiceChallenge">
+        <option value="output">Challenge 1 · Predict the output</option>
+        <option value="input">Challenge 2 · Convert input</option>
+        <option value="index">Challenge 3 · List indexing</option>
+        <option value="loop">Challenge 4 · Loop basics</option>
+      </select>
+      <div class="practice-prompt" id="practicePrompt">What does this code display?</div>
+      <pre class="practice-code" id="practiceCode">number = 2 + 3
+print(number)</pre>
+      <div class="practice-hint" id="practiceHint" hidden></div>
+      <div class="practice-answer-row">
+        <label for="practiceAnswer">Your answer</label>
+        <input id="practiceAnswer" maxlength="120" placeholder="Type your answer here">
+      </div>
+      <div class="practice-actions">
+        <button class="btn ghost" type="button" id="practiceHintBtn">Show hint</button>
+        <button class="btn primary" type="button" id="practiceCheckBtn">Check answer <span>→</span></button>
+      </div>
+      <div id="practiceFeedback" class="practice-feedback" aria-live="polite">Choose a challenge and try it.</div>
+      <button class="practice-next" type="button" id="practiceNextBtn">Next challenge ↗</button>
+    </div>
+  </div>
 </section>
 <section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI helps learners review Python code with syntax checks and, when configured, model-powered explanations. This app does not execute submitted code.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
 </main>
