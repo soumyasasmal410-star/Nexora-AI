@@ -44,22 +44,22 @@
 <section id="mentor" class="section mentor-section">
   <div class="section-heading"><div><div class="eyebrow">LET'S SOLVE IT TOGETHER</div><h2>Your coding sidekick.</h2></div><p>Paste Python code. Choose the kind of help you need. Get a syntax check and practical next steps.</p></div>
   <div class="mentor-shell">
-    <div class="mentor-sidebar"><div class="sidebar-label">WORKSPACE</div><div class="workspace-selected"><span>⌘</span> Python Mentor <i>●</i></div><div class="sidebar-note"><b>Learning mode</b><p>Hints first, answers with understanding. The tool does not execute submitted code.</p></div><div class="privacy-note"><span>◈</span><span><b>Private by default</b><small>In this MVP, code isn't saved to an account or database.</small></span></div></div>
+    <div class="mentor-sidebar"><div class="sidebar-label">WORKSPACE</div><div class="workspace-selected"><span>⌘</span> Python Mentor <i>●</i></div><div class="sidebar-note"><b>Learning mode</b><p>Hints first, answers with understanding. The tool does not execute submitted code.</p></div><div class="privacy-note"><span>◈</span><span><b>Not stored by Nexora AI</b><small>{% if ai_enabled %}Code is sent to OpenAI for this request; this app does not save it.{% else %}Code is checked locally until an AI API key is configured.{% endif %}</small></span></div></div>
     <div class="mentor-main">
-      <div class="mentor-title"><div class="tool-icon purple small-icon">⌘</div><div><h3>Python Code Mentor</h3><p>What are you working through today?</p></div><span class="offline-badge"><i></i> Starter mode</span></div>
+      <div class="mentor-title"><div class="tool-icon purple small-icon">⌘</div><div><h3>Python Code Mentor</h3><p>What are you working through today?</p></div><span class="offline-badge"><i></i> {% if ai_enabled %}AI enabled{% else %}Starter mode{% endif %}</span></div>
       <form id="mentorForm">
         <label for="question">What do you need help with? <span>Optional</span></label>
         <input id="question" maxlength="2000" placeholder="e.g. Why does this loop skip the last item?">
         <div class="editor-top"><label for="code">Your Python code</label><span>PYTHON 3 · SYNTAX CHECK</span></div>
         <div class="editor-wrap"><div class="line-nums">1<br>2<br>3<br>4<br>5</div><textarea id="code" maxlength="12000" spellcheck="false" placeholder="def greet(name):&#10;    print('Hello, ' + name)&#10;&#10;greet('world')" required></textarea></div>
         <div class="mode-row"><label for="mode">Help mode</label><select id="mode"><option value="hint">Give me hints</option><option value="debug">Debug my code</option><option value="explain">Explain the code</option><option value="improve">Suggest improvements</option></select></div>
-        <div class="form-bottom"><span>↳ We check syntax and provide rule-based tips in this first version.</span><button class="btn primary" type="submit" id="submitBtn">Analyze code <span>→</span></button></div>
+        <div class="form-bottom"><span>↳ {% if ai_enabled %}AI explanations plus a local syntax check. Submitted code is sent to OpenAI for processing.{% else %}Local syntax check and rule-based hints. Add an API key to enable AI answers.{% endif %}</span><button class="btn primary" type="submit" id="submitBtn">Analyze code <span>→</span></button></div>
       </form>
       <div id="result" class="result-panel" aria-live="polite"><div class="result-placeholder"><span>✳</span><b>Your guidance will appear here</b><p>Submit a small Python snippet to get started.</p></div></div>
     </div>
   </div>
 </section>
-<section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI is growing step by step. The current mentor uses a local syntax check and learning hints; model-powered chat and paid plans are future upgrades.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
+<section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI helps learners review Python code with syntax checks and, when configured, model-powered explanations. This app does not execute submitted code.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
 </main>
 <footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
 <script src="{{ url_for('static', filename='script.js') }}"></script>
