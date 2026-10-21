@@ -12,74 +12,159 @@ MAX_TEXT_LENGTH = 12000
 
 
 def analyze_locally(code: str, question: str, mode: str) -> dict:
-    """Useful offline fallback; never executes submitted code."""
+    """Static, offline Python guidance. Never executes submitted code."""
+    import ast
+
     hints = []
+
     try:
-        compile(code, "<submitted-code>", "exec")
+        ast.parse(code, filename="<submitted-code>", mode="exec")
         syntax_note = "Python syntax check passed. This does not guarantee the program will run correctly."
     except SyntaxError as exc:
         syntax_note = (
             f"Syntax error on line {exc.lineno or '?'}: {exc.msg}. "
-            "Check the indicated line and the line immediately before it for missing punctuation, "
-            "indentation, quotes, or brackets."
+            "Check this line and the line above for missing colons, brackets, quotes, or indentation."
         )
         if exc.text:
             hints.append(f"Problem line: {exc.text.strip()}")
 
-    patterns = [
-        (r"\bprint\s*\(", "print(...) displays a value. Check that the opening and closing parentheses match."),
-        (r"\binput\s*\(", "input() returns text. Convert it with int() or float() before numeric calculations."),
-        (r"\bwhile\s+True\b", "A while True loop needs a clear exit condition or break to avoid running forever."),
-        (r"\bif\b.*(?<!:)$", "An if statement should end with a colon, and its body must be indented."),
-        (r"\bfor\b.*\bin\b", "Check the for-loop variable and the sequence after in."),
-        (r"==", "Use == to compare values; a single = assigns a value."),
-        (r"\bexcept\b", "Catch only exceptions you can handle meaningfully; avoid silently swallowing every error."),
-        (r"\bopen\s*\(", "For files, consider a with open(...) block so the file closes automatically."),
-    ]
-    for pattern, hint in patterns:
-        if re.search(pattern, code):
-            hints.append(hint)
+    def add_hint(message):
+        if message not in hints:
+            hints.append(message)
 
-    if not hints:
-        hints.append("Try one small test input, inspect the expected result, and compare it with the actual output.")
+    try:
+        tree = ast.parse(code, filename="<submitted-code>", mode="exec")
+    except SyntaxError:
+        tree = None
+
+    if tree is not None:
+        loaded = set()
+        stored = set()
+        functions = set()
+        classes = set()
+        has_input = has_print = has_open = has_sleep = False
+        has_loop = has_for = has_if = has_comparison = False
+        has_try = has_bare_except = has_sort = False
+        has_return = has_function = False
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                if isinstance(node.ctx, ast.Load):
+                    loaded.add(node.id)
+                elif isinstance(node.ctx, (ast.Store, ast.Param)):
+                    stored.add(node.id)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                functions.add(node.name)
+                has_function = True
+            elif isinstance(node, ast.ClassDef):
+                classes.add(node.name)
+            elif isinstance(node, ast.Call):
+                name = node.func.id if isinstance(node.func, ast.Name) else (
+                    node.func.attr if isinstance(node.func, ast.Attribute) else ""
+                )
+                has_input = has_input or name == "input"
+                has_print = has_print or name == "print"
+                has_open = has_open or name == "open"
+                has_sleep = has_sleep or name == "sleep"
+                has_sort = has_sort or name in {"sort", "sorted"}
+            elif isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
+                has_loop = True
+                has_for = has_for or isinstance(node, (ast.For, ast.AsyncFor))
+            elif isinstance(node, ast.If):
+                has_if = True
+            elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
+                has_try = True
+                if any(handler.type is None for handler in node.handlers):
+                    has_bare_except = True
+            elif isinstance(node, ast.Compare):
+                has_comparison = True
+            elif isinstance(node, ast.Return):
+                has_return = True
+
+        if has_input:
+            add_hint("input() always returns text. For numeric calculations, convert it with int() or float(), and handle invalid input if needed.")
+        if has_loop and has_input:
+            add_hint("If a loop asks for input repeatedly, check that its exit condition can actually become true.")
+        if has_for:
+            add_hint("For-loops iterate over items in a sequence. Check that the sequence contains the values you expect and consider what happens when it is empty.")
+        if has_print:
+            add_hint("print() displays values. If output is unexpected, print intermediate variables to trace where it changes.")
+        if has_if and not has_comparison:
+            add_hint("Review your if conditions: use == for equality checks, and use = only when assigning a value.")
+        if has_try and has_bare_except:
+            add_hint("A bare except catches almost every exception and can hide the real problem. Prefer a specific exception such as ValueError.")
+        if has_open:
+            add_hint("When opening a file, use a with open(path, encoding='utf-8') as file block so it closes automatically.")
+        if has_sleep:
+            add_hint("sleep() pauses the program; ensure the relevant module is imported and avoid long pauses in interactive apps.")
+        if has_sort:
+            add_hint("Remember: list.sort() changes a list in place and returns None; sorted(items) returns a new sorted list.")
+        if has_function and not has_return and "return" in code:
+            add_hint("Check whether every function path returns a value. A function without a return statement returns None.")
+        builtins = set(dir(__builtins__)) if not isinstance(__builtins__, dict) else set(__builtins__.keys())
+        known = stored | functions | classes | builtins | {"self", "cls"}
+        suspicious = sorted(name for name in loaded - known if name.isidentifier() and not name.startswith("__"))
+        if len(suspicious) == 1 and stored:
+            add_hint(f"{suspicious[0]} is used but is not assigned or defined in this snippet. Check its spelling and where it is created.")
+        if not hints:
+            add_hint("No obvious issue was detected by the local checks. Try a normal input, an edge case, and an invalid input to test the logic.")
+
+    q = question.lower()
+    if any(word in q for word in ("error", "traceback", "exception", "crash", "fail", "bug")):
+        add_hint("For a runtime error, read the last line of the traceback first; it usually names the exception and its message.")
+    if any(word in q for word in ("explain", "meaning", "what does", "how does")):
+        add_hint("To understand this snippet, identify its inputs, the operations it performs, and the values it outputs.")
+    if any(word in q for word in ("slow", "optimize", "efficient", "faster")):
+        add_hint("Measure or profile the slow part before optimizing, and keep a small test to confirm the result stays correct.")
+    if any(word in q for word in ("list", "index", "last item", "out of range")):
+        add_hint("Python list indexes start at 0. The last item is items[-1], while items[len(items)] is out of range.")
+    if any(word in q for word in ("loop", "iterate", "repeat")):
+        add_hint("For loops are useful when iterating over items; while loops are useful when repeating until a condition changes.")
 
     if mode == "debug":
-        headline = "Debugging guide"
+        headline = "Offline debugging guide"
         next_steps = [
-            "Reproduce the problem with the smallest possible input.",
-            "Read the exact traceback from the last line upward.",
-            "Check variable values near the line where the result first becomes incorrect.",
+            "Read the last line of the traceback and note the exception type and message.",
+            "Reproduce the issue with the smallest input that still fails.",
+            "Check variable values and types just before the failing line.",
+            "Change one thing at a time and rerun the same test.",
         ]
     elif mode == "explain":
-        headline = "Code explanation"
+        headline = "Offline code explanation"
         next_steps = [
-            "Read the code from top to bottom and note the inputs, transformations, and outputs.",
-            "Trace one example by hand and write down how each important variable changes.",
+            "Mark the inputs, decisions, loops, and outputs as you read from top to bottom.",
+            "Trace one example by hand and record important variable values after each step.",
+            "For each function, identify its arguments, return value, and side effects.",
         ]
     elif mode == "improve":
-        headline = "Code improvement ideas"
+        headline = "Offline improvement ideas"
         next_steps = [
-            "Give variables clear names and split large tasks into small functions.",
-            "Add tests for a normal case, an edge case, and invalid input.",
-            "Only optimize after you know the program is correct.",
+            "Use descriptive names and split repeated work into small functions.",
+            "Handle empty and invalid input, not just the normal case.",
+            "Add tests for a normal case, an edge case, and an invalid case.",
+            "Optimize only after you know the program is correct.",
         ]
     else:
-        headline = "Learning hints"
+        headline = "Learning hints (offline)"
         next_steps = [
-            "Try to predict what each line does before running the program.",
-            "Change one thing at a time and observe the result.",
-            "Write down why the fix works so you can recognize the pattern again.",
+            "Predict what the code should do before testing it.",
+            "Try one normal input, one edge case, and one invalid input.",
+            "Change one thing at a time and note why the change helps.",
         ]
 
     return {
         "headline": headline,
         "syntax": syntax_note,
-        "hints": hints[:5],
+        "hints": hints[:6],
         "next_steps": next_steps,
         "question": question.strip() or "No extra question supplied.",
         "offline": True,
+        "ai_enabled": False,
+        "message": (
+            "Free offline mode: checks Python syntax and common patterns without sending code to an AI provider. "
+            "It does not execute your code, and static hints may miss logic or runtime bugs."
+        ),
     }
-
 
 @app.get("/")
 def home():
