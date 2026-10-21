@@ -6,13 +6,14 @@ Nexora AI is a standalone AI-powered tools platform for students, developers, an
 
 ## Current MVP
 - Responsive dark/neon landing page and tool dashboard.
-- Python syntax validation and beginner-friendly rule-based hints.
+- Python syntax validation and beginner-friendly guidance.
 - Modes for hints, debugging, code explanation, and improvement suggestions.
+- Optional server-side OpenAI Responses API integration.
+- Local syntax/rule-based fallback when the API key is missing or the AI request fails.
 - Does not execute submitted code.
-- Does not save submitted code or require an API key.
 - Health endpoint at `/health`.
 
-> Note: This version does not yet call an AI model. Model-powered conversational explanations, accounts, usage quotas, payments, and other tools are planned later. The current hints are rule-based and may not identify every bug.
+When OPENAI_API_KEY is configured, submitted code and the optional question are sent to OpenAI for processing. This app does not save submitted code to an account or database. Review your provider settings and privacy needs before sharing sensitive code. Without the key, the mentor uses local syntax checks and rule-based hints.
 
 ## Run locally
 ```bash
@@ -30,13 +31,18 @@ Create a **new Web Service** from this repository, not the existing My Portfolio
 - Start command: `gunicorn app:app`
 - Health check path: `/health`
 
+For AI mode, add these environment variables in Render (never commit secrets):
+- OPENAI_API_KEY: your OpenAI API key.
+- OPENAI_MODEL: optional model override; defaults to gpt-5-mini.
+
+The OpenAI API may incur usage charges. Set API spending limits/alerts in your provider dashboard and monitor usage before making the service public.
+
 ## Planned roadmap
-1. Connect a server-side AI provider through an environment secret.
-2. Add per-session rate limits and usage visibility.
-3. Test with beginner Python examples and error cases.
-4. Add accounts and saved projects only after privacy/security decisions.
-5. Integrate payment checkout after the core experience has real users.
-6. Expand to resume tools, a safe code workspace, and study/productivity tools.
+1. Add a persistent rate limiter and usage visibility before public launch.
+2. Test AI responses, failure fallback, and provider spend limits.
+3. Add accounts and saved projects only after privacy/security decisions.
+4. Integrate payment checkout after the core experience has real users.
+5. Expand to resume tools, a safe code workspace, and study/productivity tools.
 
 ## Security notes
 Never put provider API keys in frontend JavaScript or commit secrets. This app deliberately does not use `eval` or execute submitted Python. Keep input limits and add a persistent rate limiter before a public launch.
