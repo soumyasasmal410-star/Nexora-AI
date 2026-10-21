@@ -25,3 +25,38 @@
 .practice-next{border:0;background:transparent;color:#b7a8ff;font-size:11px;font-weight:800;padding:14px 0 0;cursor:pointer}
 .practice-next:hover{color:#e3dcff}
 @media(max-width:650px){.practice-heading{align-items:flex-start;flex-direction:column;gap:10px}.practice-card{padding:13px}.practice-actions{flex-direction:column}.practice-actions .btn{width:100%}}
+
+
+/* Secure account pages, matching Nexora's existing dark/neon visual system */
+.account-nav{display:flex;align-items:center;gap:14px}
+.account-link{color:#c0c9df;text-decoration:none;font-size:11px;font-weight:700}
+.account-link:hover{color:#fff}
+.logout-inline{display:inline-flex;margin:0}
+.logout-inline .top-cta{cursor:pointer;font-family:inherit}
+.auth-page{min-height:100vh;display:flex;flex-direction:column}
+.auth-topbar{position:relative}
+.auth-main{width:100%;max-width:560px;margin:0 auto;padding:48px 20px 72px;flex:1;display:flex;align-items:center;justify-content:center}
+.auth-card{width:100%;border:1px solid #293550;border-radius:20px;background:rgba(14,20,36,.94);padding:clamp(22px,5vw,42px);box-shadow:0 24px 90px #0002}
+.auth-icon{margin-bottom:22px}
+.auth-card>.eyebrow{margin-bottom:12px}
+.auth-card h1{font-size:clamp(30px,5vw,42px);line-height:1.08;letter-spacing:-1.8px;margin:0 0 12px;color:#f1f3ff}
+.auth-subtitle{font-size:12px;line-height:1.8;color:#9ba8c3;margin:0 0 25px}
+.auth-form{display:flex;flex-direction:column;gap:10px}
+.auth-form label{font-size:11px;font-weight:700;color:#c6cee2;margin-top:6px}
+.auth-form input{width:100%;min-width:0;border:1px solid #2c3854;border-radius:9px;background:#090f1d;color:#edf1ff;padding:13px 14px;font:inherit;font-size:12px;outline:none}
+.auth-form input:focus{border-color:#9b7cff;box-shadow:0 0 0 3px #9170ff22}
+.auth-submit{width:100%;justify-content:center;margin-top:12px}
+.auth-help{font-size:10px;line-height:1.7;color:#8392b1;margin:0 0 4px}
+.auth-switch{text-align:center;color:#9ba8c3;font-size:11px;margin:22px 0 0}
+.auth-switch a{color:#b9a8ff;font-weight:800;text-decoration:none}
+.auth-privacy{font-size:10px;line-height:1.8;color:#7181a0;border-top:1px solid #ffffff0c;padding-top:15px;margin:22px 0 0}
+.flash-list{display:grid;gap:8px;margin:0 0 16px}
+.flash-message{padding:11px 12px;border:1px solid #293651;border-radius:9px;font-size:11px;line-height:1.7;background:#111a2c;color:#b9c7e2}
+.flash-message.error{border-color:#674047;background:#25151d;color:#ffc0c8}
+.flash-message.success{border-color:#285b4b;background:#10241f;color:#9ce8c7}
+.flash-message.info{border-color:#393663;background:#17152b;color:#d0c8ff}
+.dashboard-main{max-width:680px}
+.dashboard-feature{display:flex;align-items:flex-start;gap:14px;border:1px solid #293651;border-radius:12px;padding:16px;background:#0b1120;margin:20px 0}
+.dashboard-feature b{font-size:13px;color:#e9edff}
+.dashboard-feature p{font-size:11px;line-height:1.8;color:#9ba8c3;margin:7px 0 10px}
+@media(max-width:650px){.auth-topbar{padding:0 17px}.auth-main{padding:30px 16px 48px}.account-nav{gap:10px}.account-link{font-size:10px}.account-nav .top-cta{font-size:10px;padding:10px}.auth-card{border-radius:15px}.auth-card h1{letter-spacing:-1px}}
