@@ -8,9 +8,10 @@ Nexora AI is a standalone AI-powered tools platform for students, developers, an
 - Responsive dark/neon landing page and tool dashboard.
 - Python syntax validation and beginner-friendly guidance.
 - Modes for hints, debugging, code explanation, and improvement suggestions.
-- Free offline mode by default, with AST-based syntax checks and common-pattern hints.
+- Free offline mode by default, with AST-based syntax checks, common-pattern diagnostics, worked examples, and a local Python practice quiz.
 - Optional server-side OpenAI Responses API integration, disabled unless explicitly enabled.
 - Local guidance never executes submitted code.
+- Practice answers are checked locally against small fixed exercises; they do not execute user-provided code.
 - Does not execute submitted code.
 - Health endpoint at `/health`.
 
