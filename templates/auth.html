@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080b16">
+<title>{{ 'Create account' if page == 'signup' else 'Log in' }} · Nexora AI</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<header class="topbar auth-topbar">
+  <a class="brand" href="/" aria-label="Nexora AI home"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a>
+  <a class="account-link" href="/">← Back to home</a>
+</header>
+<main class="auth-main">
+  <section class="auth-card">
+    <div class="tool-icon purple auth-icon">⌘</div>
+    <div class="eyebrow">{{ 'YOUR NEXT CHAPTER STARTS HERE' if page == 'signup' else 'WELCOME BACK' }}</div>
+    <h1>{{ 'Create your account.' if page == 'signup' else 'Log in to Nexora.' }}</h1>
+    <p class="auth-subtitle">{{ 'Create a secure account to get ready for your personal workspace.' if page == 'signup' else 'Sign in to continue to your Nexora AI workspace.' }}</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-list" aria-live="polite">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <form method="post" class="auth-form" autocomplete="on">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if page == 'signup' %}
+      <label for="name">Full name</label>
+      <input id="name" name="name" type="text" maxlength="80" autocomplete="name" required value="{{ request.form.get('name', '') }}">
+      {% endif %}
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required value="{{ request.form.get('email', '') }}">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" minlength="12" maxlength="128" autocomplete="{{ 'new-password' if page == 'signup' else 'current-password' }}" required>
+      {% if page == 'signup' %}
+      <label for="confirm_password">Confirm password</label>
+      <input id="confirm_password" name="confirm_password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required>
+      <p class="auth-help">Use at least 12 characters. A long passphrase is easier to remember and harder to guess.</p>
+      {% endif %}
+      <button class="btn primary auth-submit" type="submit">{{ 'Create account' if page == 'signup' else 'Log in' }} <span>→</span></button>
+    </form>
+    <p class="auth-switch">{% if page == 'signup' %}Already have an account? <a href="{{ url_for('login') }}">Log in</a>{% else %}New to Nexora AI? <a href="{{ url_for('signup') }}">Create an account</a>{% endif %}</p>
+    <p class="auth-privacy">Email verification is planned for a later phase. Keep your password private and use a unique one.</p>
+  </section>
+</main>
+<footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body></html>
