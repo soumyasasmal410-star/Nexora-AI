@@ -1,11 +1,93 @@
 import json
 import os
 import re
-from flask import Flask, render_template, request, jsonify
+import secrets
+from datetime import datetime, timezone
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from flask_login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
+from flask_sqlalchemy import SQLAlchemy
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash, check_password_hash
 from openai import OpenAI
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024  # 64 KB request limit
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+database_url = os.getenv("DATABASE_URL", "sqlite:///nexora_local.db")
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(os.getenv("RENDER") or os.getenv("FLASK_ENV") == "production")
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+login_manager.login_message = "Please log in to access that page."
+login_manager.login_message_category = "info"
+limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(254), unique=True, index=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password, method="scrypt")
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
+
+
+@app.context_processor
+def inject_csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+    return {"csrf_token": session["_csrf_token"]}
+
+
+@app.before_request
+def enforce_csrf_for_auth_forms():
+    if request.method == "POST" and request.endpoint in {"signup", "login", "logout"}:
+        expected = session.get("_csrf_token", "")
+        supplied = request.form.get("csrf_token", "")
+        import hmac
+        if not expected or not supplied or not hmac.compare_digest(expected, supplied):
+            flash("Your form session expired. Please try again.", "error")
+            return redirect(request.referrer or url_for("home"))
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    return response
+
+
+@app.before_request
+def ensure_database_tables():
+    # Create tables if needed. Render's DATABASE_URL should point to PostgreSQL in production.
+    if not getattr(app, "_tables_checked", False):
+        with app.app_context():
+            db.create_all()
+        app._tables_checked = True
+
 
 MAX_FREE_REQUESTS_PER_SESSION = 8
 MAX_TEXT_LENGTH = 12000
@@ -231,6 +313,77 @@ def home():
 @app.get("/health")
 def health():
     return jsonify(status="ok", app="Nexora AI")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+        if not name or len(name) > 80:
+            flash("Enter a name between 1 and 80 characters.", "error")
+        elif len(email) > 254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+            flash("Enter a valid email address.", "error")
+        elif len(password) < 12 or len(password) > 128:
+            flash("Use a password between 12 and 128 characters.", "error")
+        elif password != confirm:
+            flash("Passwords do not match.", "error")
+        elif User.query.filter_by(email=email).first():
+            flash("An account with this email already exists. Try logging in.", "error")
+        else:
+            user = User(name=name, email=email)
+            user.set_password(password)
+            try:
+                db.session.add(user)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Signup failed while saving user.")
+                flash("We couldn't create your account right now. Please try again.", "error")
+            else:
+                session.pop("_csrf_token", None)
+                login_user(user, remember=False, fresh=True)
+                flash("Account created. Welcome to Nexora AI!", "success")
+                return redirect(url_for("dashboard"))
+    return render_template("auth.html", page="signup")
+
+
+@app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first() if email else None
+        if user and user.check_password(password):
+            session.pop("_csrf_token", None)
+            login_user(user, remember=False, fresh=True)
+            flash("You're logged in.", "success")
+            return redirect(url_for("dashboard"))
+        flash("Email or password is incorrect.", "error")
+    return render_template("auth.html", page="login")
+
+
+@app.post("/logout")
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    flash("You've been logged out.", "success")
+    return redirect(url_for("home"))
+
+
+@app.get("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
 
 
 def analyze_with_ai(code: str, question: str, mode: str, local_result: dict) -> dict:
