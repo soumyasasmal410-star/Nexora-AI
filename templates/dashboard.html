@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080b16">
+<title>Your workspace · Nexora AI</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<header class="topbar auth-topbar">
+  <a class="brand" href="/" aria-label="Nexora AI home"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a>
+  <form method="post" action="{{ url_for('logout') }}" class="logout-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="top-cta" type="submit">Log out</button></form>
+</header>
+<main class="auth-main dashboard-main">
+  <section class="auth-card dashboard-card">
+    <div class="tool-icon purple auth-icon">⌘</div>
+    <div class="eyebrow">YOUR PERSONAL SPACE</div>
+    <h1>Welcome, {{ current_user.name|e }}.</h1>
+    <p class="auth-subtitle">Your Nexora AI account is ready. Your workspace is being built one useful feature at a time.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-list" aria-live="polite">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <div class="dashboard-feature">
+      <div class="tool-icon purple">⌘</div><div><b>Python Code Mentor</b><p>Continue learning with the free offline code checker and practice exercises.</p><a class="text-link" href="{{ url_for('home') }}#mentor">Open Code Mentor →</a></div>
+    </div>
+    <p class="auth-privacy">Account created: {{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'Recently' }}. Email verification will be added in a later phase.</p>
+    <a class="btn primary auth-submit" href="{{ url_for('home') }}">Back to Nexora AI <span>→</span></a>
+  </section>
+</main>
+<footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body></html>
