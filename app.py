@@ -168,7 +168,7 @@ def analyze_locally(code: str, question: str, mode: str) -> dict:
 
 @app.get("/")
 def home():
-    return render_template("index.html", ai_enabled=bool(os.getenv("OPENAI_API_KEY")))
+    return render_template("index.html", ai_enabled=(os.getenv("ENABLE_AI_MENTOR", "false").lower() == "true" and bool(os.getenv("OPENAI_API_KEY"))))
 
 
 @app.get("/health")
@@ -179,10 +179,18 @@ def health():
 def analyze_with_ai(code: str, question: str, mode: str, local_result: dict) -> dict:
     """Ask the configured model for guidance; submitted code is never executed."""
     api_key = os.getenv("OPENAI_API_KEY")
+    ai_enabled = os.getenv("ENABLE_AI_MENTOR", "false").lower() == "true"
+    if not ai_enabled:
+        local_result["message"] = (
+            "Free offline mode is active. No code was sent to an AI provider. "
+            "Enable AI later by setting ENABLE_AI_MENTOR=true in Render and ensuring API billing is active."
+        )
+        local_result["ai_enabled"] = False
+        return local_result
     if not api_key:
         local_result["message"] = (
-            "AI is not configured yet. Add OPENAI_API_KEY in Render Environment to enable "
-            "model-generated help. Showing local syntax checks and rule-based hints for now."
+            "Free offline mode is active because no API key is configured. "
+            "No code was sent to an AI provider."
         )
         local_result["ai_enabled"] = False
         return local_result
