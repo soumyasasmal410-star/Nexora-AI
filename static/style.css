@@ -150,3 +150,14 @@ main, section, .section, .mentor-section, .mentor-shell, .mentor-main,
   .practice-actions .btn { width:100%; }
   footer { width:100%; padding:18px 14px; gap:10px; }
 }
+
+
+/* Cursor FX: desktop only; keep the real system cursor available */
+.nexora-cursor-dot,.nexora-cursor-ring,.nexora-cursor-trail{position:fixed;pointer-events:none;z-index:10000;opacity:0;will-change:transform;transition:opacity .16s ease}
+.nexora-cursor-dot{left:0;top:0;width:7px;height:7px;border-radius:50%;background:#00f5d4;box-shadow:0 0 14px #00f5d4,0 0 28px #00f5d477}
+.nexora-cursor-ring{left:0;top:0;width:30px;height:30px;border:1px solid rgba(0,245,212,.75);border-radius:50%;box-shadow:0 0 18px rgba(0,245,212,.13);transition:opacity .16s ease,width .18s ease,height .18s ease,border-color .18s ease}
+.nexora-cursor-dot.is-visible,.nexora-cursor-ring.is-visible{opacity:1}
+.nexora-cursor-ring.is-pressed{width:22px;height:22px;border-color:#9b83ff}
+.nexora-cursor-trail{width:5px;height:5px;border-radius:50%;background:var(--trail-color,#00f5d4);box-shadow:0 0 12px var(--trail-color,#00f5d4);transform:translate(-50%,-50%) scale(1);transition:opacity .5s ease,transform .5s ease}
+.nexora-cursor-trail.nexora-trail-fade{opacity:0;transform:translate(-50%,-50%) scale(.1)}
+@media(pointer:coarse),(prefers-reduced-motion:reduce){.nexora-cursor-dot,.nexora-cursor-ring,.nexora-cursor-trail{display:none!important}}
