@@ -64,12 +64,15 @@ def inject_csrf_token():
 
 
 @app.before_request
-def enforce_csrf_for_auth_forms():
-    if request.method == "POST" and request.endpoint in {"signup", "login", "logout"}:
+def enforce_csrf_for_sensitive_posts():
+    protected_endpoints = {"signup", "login", "logout", "premium.create_order", "premium.verify"}
+    if request.method == "POST" and request.endpoint in protected_endpoints:
         expected = session.get("_csrf_token", "")
-        supplied = request.form.get("csrf_token", "")
+        supplied = request.form.get("csrf_token", "") or request.headers.get("X-CSRF-Token", "")
         import hmac
         if not expected or not supplied or not hmac.compare_digest(expected, supplied):
+            if request.endpoint.startswith("premium."):
+                return jsonify(error="Your form session expired. Refresh the page and try again."), 400
             flash("Your form session expired. Please try again.", "error")
             return redirect(request.referrer or url_for("home"))
 
@@ -477,8 +480,22 @@ def mentor():
     if mode not in {"hint", "debug", "explain", "improve"}:
         mode = "hint"
 
+    ai_requested = os.getenv("ENABLE_AI_MENTOR", "false").lower() == "true" and bool(os.getenv("OPENAI_API_KEY"))
+    if ai_requested:
+        if not current_user.is_authenticated:
+            return jsonify(error="Log in or create an account to use AI Mentor. Offline checks remain free."), 401
+        from premium import check_and_count_usage, is_premium
+        allowed, message = check_and_count_usage(current_user)
+        if not allowed:
+            return jsonify(error=message, upgrade_url=url_for("home") + "#premium"), 429
+
     local_result = analyze_locally(code, question, mode)
-    return jsonify(analyze_with_ai(code, question, mode, local_result))
+    result = analyze_with_ai(code, question, mode, local_result)
+    if ai_requested:
+        from premium import is_premium
+        result["premium"] = is_premium(current_user)
+        result["usage_limit"] = None if result["premium"] else 10
+    return jsonify(result)
 
 @app.errorhandler(413)
 def too_large(_error):
