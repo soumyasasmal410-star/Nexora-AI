@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080b16">
+<meta name="csrf-token" content="{{ csrf_token }}">
 <meta name="description" content="Nexora AI — coding assistance and smart digital tools for students, developers, and creators.">
 <title>Nexora AI — Build smarter</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -66,6 +67,23 @@
       <div id="result" class="result-panel" aria-live="polite"><div class="result-placeholder"><span>✳</span><b>Your guidance will appear here</b><p>Submit a small Python snippet to get started.</p></div></div>
     </div>
   </div>
+  <section id="premium" class="premium-panel">
+    <div class="premium-copy">
+      <div class="eyebrow">LEVEL UP YOUR WORKSPACE</div>
+      <h3>AI Mentor Premium</h3>
+      <p>10 free AI Mentor requests per day. Upgrade for unlimited AI Mentor requests for 30 days. Offline syntax checks and Python Practice Mode remain free.</p>
+      <div class="premium-price"><strong>₹199</strong><span>/ 30 days</span></div>
+      {% if current_user.is_authenticated %}
+        <p id="premiumStatus" class="premium-status" aria-live="polite">Checking your plan…</p>
+        <button id="premiumBuyBtn" class="btn primary" type="button">Upgrade with Razorpay <span>→</span></button>
+      {% else %}
+        <p class="premium-status">Log in to check your plan or purchase Premium.</p>
+        <a class="btn primary" href="{{ url_for('login') }}">Log in to upgrade <span>→</span></a>
+      {% endif %}
+      <p id="premiumMessage" class="premium-message" aria-live="polite"></p>
+      <small>Secure checkout powered by Razorpay. AI requests require ENABLE_AI_MENTOR=true and a valid OpenAI API key on the server.</small>
+    </div>
+  </section>
   <div class="practice-panel" id="python-practice">
     <div class="practice-heading">
       <div><div class="eyebrow">PRACTISE WITHOUT PRESSURE</div><h3>Python practice mode.</h3></div>
@@ -99,5 +117,6 @@ print(number)</pre>
 <section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI helps learners review Python code with syntax checks and, when configured, model-powered explanations. This app does not execute submitted code.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
 </main>
 <footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body></html>
