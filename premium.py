@@ -60,8 +60,8 @@ def init_premium(app, database, User):
         created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     Plan, Usage, Payment = PremiumPlan, UsageModel, PaymentModel
-    with app.app_context():
-        db.create_all()
+    # app.py creates all registered models on the first request, after this
+    # module has registered its models; avoid database I/O during Gunicorn import.
 
 
 def is_premium(user):
