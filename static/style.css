@@ -60,3 +60,19 @@
 .dashboard-feature b{font-size:13px;color:#e9edff}
 .dashboard-feature p{font-size:11px;line-height:1.8;color:#9ba8c3;margin:7px 0 10px}
 @media(max-width:650px){.auth-topbar{padding:0 17px}.auth-main{padding:30px 16px 48px}.account-nav{gap:10px}.account-link{font-size:10px}.account-nav .top-cta{font-size:10px;padding:10px}.auth-card{border-radius:15px}.auth-card h1{letter-spacing:-1px}}
+
+
+/* Premium plan and checkout */
+.premium-panel{max-width:1084px;margin:0 auto 40px;padding:28px;border:1px solid #3b3566;border-radius:20px;background:radial-gradient(ellipse at top right,#5d4ca526,transparent 55%),linear-gradient(135deg,#11182b,#0c1120);display:flex;justify-content:space-between;gap:24px}
+.premium-copy{max-width:700px}
+.premium-copy h3{font-size:25px;letter-spacing:-.8px;margin:12px 0}
+.premium-copy>p{font-size:12px;line-height:1.8;color:#a5b0ca}
+.premium-price{display:flex;align-items:baseline;gap:9px;margin:17px 0}
+.premium-price strong{font-size:32px;letter-spacing:-1px}
+.premium-price span{font-size:12px;color:#9ba8c3}
+.premium-status{color:#8ce7bc!important}
+.premium-message{min-height:16px;color:#8ce7bc}
+.premium-message.is-error{color:#ff9eae}
+.premium-copy small{display:block;color:#7e8ba6;font-size:10px;line-height:1.7;max-width:600px}
+#premiumBuyBtn:disabled{opacity:.65;cursor:not-allowed;transform:none}
+@media(max-width:700px){.premium-panel{margin:0 18px 30px;padding:22px}.premium-copy h3{font-size:22px}}
