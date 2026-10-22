@@ -85,3 +85,90 @@ if (challengeSelect) {
   });
   loadPracticeChallenge();
 }
+
+/* Premium status and Razorpay checkout */
+(async function setupPremiumCheckout() {
+  const buyButton = document.getElementById("premiumBuyBtn");
+  const statusText = document.getElementById("premiumStatus");
+  const message = document.getElementById("premiumMessage");
+  if (!buyButton) return;
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+  const say = (text, isError = false) => {
+    if (message) {
+      message.textContent = text;
+      message.className = "premium-message" + (isError ? " is-error" : "");
+    }
+  };
+
+  async function refreshStatus() {
+    try {
+      const response = await fetch("/premium/status", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("Could not load plan status.");
+      const data = await response.json();
+      statusText.textContent = data.premium
+        ? "Premium active — your AI Mentor plan is ready."
+        : `Free plan: ${data.used_today}/${data.daily_limit} AI requests used today.`;
+      if (data.premium) buyButton.textContent = "Premium active";
+      buyButton.disabled = Boolean(data.premium);
+    } catch (_error) {
+      statusText.textContent = "Plan status is temporarily unavailable.";
+    }
+  }
+
+  await refreshStatus();
+
+  buyButton.addEventListener("click", async () => {
+    buyButton.disabled = true;
+    say("Starting secure checkout…");
+    try {
+      const response = await fetch("/premium/create-order", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+        body: "{}"
+      });
+      const order = await response.json();
+      if (!response.ok) throw new Error(order.error || "Could not create a payment order.");
+      if (typeof window.Razorpay !== "function") throw new Error("Razorpay checkout could not load. Please disable blockers or try again.");
+
+      const checkout = new window.Razorpay({
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency,
+        name: order.name,
+        description: order.description,
+        order_id: order.order_id,
+        handler: async function (result) {
+          say("Payment received. Verifying securely…");
+          try {
+            const verifyResponse = await fetch("/premium/verify", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+              body: JSON.stringify(result)
+            });
+            const verified = await verifyResponse.json();
+            if (!verifyResponse.ok || !verified.ok) throw new Error(verified.error || "Payment verification failed.");
+            say("Payment verified. Premium is active!");
+            await refreshStatus();
+          } catch (error) {
+            say(error.message + " If money was deducted, keep your Razorpay payment ID and contact support.", true);
+          } finally {
+            buyButton.disabled = false;
+          }
+        },
+        modal: { ondismiss: () => { say("Checkout closed. No plan was activated."); buyButton.disabled = false; } },
+        theme: { color: "#8e6dff" }
+      });
+      checkout.on("payment.failed", event => {
+        say(event.error?.description || "Payment failed. Please try again.", true);
+        buyButton.disabled = false;
+      });
+      checkout.open();
+    } catch (error) {
+      say(error.message || "Checkout failed. Please try again.", true);
+      buyButton.disabled = false;
+    }
+  });
+})();
