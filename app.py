@@ -48,6 +48,12 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+from premium import premium_bp, init_premium
+
+init_premium(app, db, User)
+app.register_blueprint(premium_bp)
+
+
 @login_manager.user_loader
 def load_user(user_id):
     try:
