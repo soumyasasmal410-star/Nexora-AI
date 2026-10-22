@@ -48,7 +48,7 @@ HDR = "{'Content-Type':'application/json','X-CSRF-Token':'{{ csrf_token }}'}"
 
 
 def _page(body, **ctx):
-    return render_template_string(BASE_CSS + body + COOKIE_BANNER, **ctx)
+    return render_template_string(BASE_CSS + body + COOKIE_BANNER + '<script src="/static/fx.js" defer></script>', **ctx)
 
 
 def _upgrade_page():
