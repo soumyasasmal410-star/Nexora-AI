@@ -186,3 +186,14 @@ main, section, .section, .mentor-section, .mentor-shell, .mentor-main,
 @media(max-width:850px){.auth-page .auth-main{max-width:600px;grid-template-columns:1fr;padding:30px 18px 44px}.auth-page .auth-visual{display:none}.auth-page .auth-card{max-width:520px}.auth-page .auth-card h1{font-size:clamp(30px,7vw,40px)}}
 @media(max-width:520px){.auth-page .auth-main{padding:24px 14px 38px}.auth-page .auth-card{padding:25px 20px;border-radius:18px}.auth-page.auth-signup .auth-card{padding-top:23px;padding-bottom:23px}.auth-page .auth-form input{min-height:44px}.auth-page .auth-switch{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.auth-page .auth-form input{transition:none}}
+
+
+/* Login/signup 3D canvas layering */
+.auth-page .auth-visual{position:relative;isolation:isolate}
+.auth-page .auth-visual-shade,.auth-page .auth-visual-content{position:relative;z-index:2}
+.auth-page .auth-3d-host{position:relative;isolation:isolate}
+.auth-page .auth-3d-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:block}
+.auth-page .auth-visual-content{pointer-events:none}
+.auth-page .auth-visual-content a{pointer-events:auto}
+.auth-page .auth-card>*:not(.auth-3d-canvas){position:relative;z-index:2}
+.auth-page .auth-3d-mobile-host .auth-3d-canvas{opacity:.5}
