@@ -49,9 +49,12 @@ class User(UserMixin, db.Model):
 
 
 from premium import premium_bp, init_premium
+from premium_extras import extras_bp, init_extras
 
 init_premium(app, db, User)
 app.register_blueprint(premium_bp)
+init_extras(app, db)
+app.register_blueprint(extras_bp)
 
 
 @login_manager.user_loader
