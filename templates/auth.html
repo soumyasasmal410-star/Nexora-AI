@@ -7,7 +7,7 @@
 <title>{{ 'Create account' if page == 'signup' else 'Log in' }} · Nexora AI</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="auth-page auth-{{ page }}">
+<body class="auth-page">
 <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
 <header class="topbar auth-topbar">
   <a class="brand" href="/" aria-label="Nexora AI home"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a>
@@ -48,22 +48,7 @@
     <p class="auth-switch">{% if page == 'signup' %}Already have an account? <a href="{{ url_for('login') }}">Log in</a>{% else %}New to Nexora AI? <a href="{{ url_for('signup') }}">Create an account</a>{% endif %}</p>
     <p class="auth-privacy">Email verification is planned for a later phase. Keep your password private and use a unique one.</p>
   </section>
-  <aside class="auth-visual" aria-label="Nexora AI welcome panel">
-    <div class="auth-visual-shade"></div>
-    <div class="auth-visual-content">
-      <a class="auth-visual-brand" href="/"><span class="brand-mark">N</span> NEXORA <b>AI</b></a>
-      <div class="auth-visual-bottom">
-        <span class="auth-visual-pill"><span></span> YOUR NEXT CHAPTER</span>
-        <h2>{{ 'A smarter way to build starts here.' if page == 'signup' else 'Welcome back to your space.' }}</h2>
-        <p>{{ 'Create your account and bring your ideas to life with Nexora AI.' if page == 'signup' else 'Your ideas, tools, and next big breakthrough are waiting for you.' }}</p>
-        <div class="auth-visual-dots"><i></i><i></i><i></i></div>
-      </div>
-      <div class="auth-visual-foot">LEARN · CREATE · BUILD</div>
-    </div>
-  </aside>
 </main>
 <footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script>window.NEXORA_FX="auth";</script>
-<script src="{{ url_for('static', filename='fx.js') }}" defer></script>
 </body></html>
