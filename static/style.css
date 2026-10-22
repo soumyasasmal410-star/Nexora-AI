@@ -76,3 +76,77 @@
 .premium-copy small{display:block;color:#7e8ba6;font-size:10px;line-height:1.7;max-width:600px}
 #premiumBuyBtn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 @media(max-width:700px){.premium-panel{margin:0 18px 30px;padding:22px}.premium-copy h3{font-size:22px}}
+
+
+/* Mobile layout fixes: keep the workspace readable and separate adjacent panels */
+html, body { width:100%; max-width:100%; }
+body { min-width:0; }
+main, section, .section, .mentor-section, .mentor-shell, .mentor-main,
+.premium-panel, .practice-panel, .closing, footer { min-width:0; }
+.mentor-section { width:100%; }
+.mentor-shell { margin-bottom:26px; }
+.premium-panel {
+  position:relative;
+  clear:both;
+  box-sizing:border-box;
+  width:calc(100% - 56px);
+  margin:26px auto 34px;
+  flex:0 0 auto;
+}
+.practice-panel {
+  position:relative;
+  clear:both;
+  width:100%;
+  box-sizing:border-box;
+  margin:30px 0 0;
+}
+@media (max-width:900px) {
+  .section { width:100%; }
+  .mentor-shell { width:100%; }
+  .premium-panel { width:100%; }
+}
+@media (max-width:650px) {
+  .topbar { width:100%; min-width:0; padding-left:14px; padding-right:14px; gap:10px; }
+  .brand { gap:7px; font-size:15px; flex-shrink:0; }
+  .brand-mark { width:29px; height:29px; border-radius:9px; }
+  .account-nav { min-width:0; gap:8px; }
+  .account-link { max-width:105px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .account-nav .top-cta { white-space:nowrap; }
+  .section { padding:52px 14px; }
+  .mentor-section { padding-top:40px; }
+  .mentor-section > .section-heading { margin-bottom:22px; }
+  .mentor-shell { display:flex; flex-direction:column; width:100%; border-radius:16px; margin-bottom:22px; }
+  .mentor-sidebar { width:100%; }
+  .mentor-main { width:100%; min-width:0; padding:17px 12px; }
+  .mentor-title { gap:9px; }
+  .mentor-title > div:nth-child(2) { min-width:0; }
+  .mentor-title h3 { font-size:14px; }
+  .offline-badge { font-size:8px; padding:7px 8px; }
+  .editor-wrap { min-width:0; grid-template-columns:28px minmax(0,1fr); }
+  .editor-wrap textarea { min-width:0; width:100%; font-size:11px; }
+  .mode-row { align-items:flex-start; flex-direction:column; gap:8px; }
+  .mode-row select { width:100%; max-width:none; }
+  .form-bottom { gap:12px; }
+  .form-bottom .btn { width:100%; }
+  .premium-panel {
+    display:block;
+    width:100%;
+    max-width:none;
+    margin:24px 0 28px;
+    padding:19px 15px;
+    border-radius:16px;
+    border:1px solid #514581;
+    overflow-wrap:anywhere;
+  }
+  .premium-copy { width:100%; max-width:none; }
+  .premium-copy h3 { font-size:21px; line-height:1.25; }
+  .premium-copy > p { font-size:12px; }
+  .premium-price strong { font-size:30px; }
+  #premiumBuyBtn, .premium-copy > .btn { max-width:100%; }
+  .practice-panel { width:100%; margin:26px 0 0; padding:15px 12px; border-radius:16px; }
+  .practice-card { min-width:0; padding:12px; }
+  .practice-card select, .practice-answer-row input { width:100%; max-width:100%; min-width:0; }
+  .practice-actions { display:grid; grid-template-columns:1fr; }
+  .practice-actions .btn { width:100%; }
+  footer { width:100%; padding:18px 14px; gap:10px; }
+}
