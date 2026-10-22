@@ -68,3 +68,22 @@ The app includes password-based signup/login, a protected dashboard, CSRF checks
 **Important:** If `DATABASE_URL` is absent, the app uses local SQLite as a development fallback. On a typical Render web service filesystem, that file is not a reliable persistent production database. Do not use fallback SQLite for real customer accounts. Set `DATABASE_URL` to Render PostgreSQL before inviting users. Keep the database URL and `SECRET_KEY` private.
 
 Passwords are stored as Werkzeug scrypt hashes, never as plaintext. Signup requires 12–128 characters. Login/signup are rate-limited in-process; for a high-traffic public launch, move rate limiting to shared persistent storage (such as Redis) and add email verification, password reset, monitoring, and a database migration workflow.
+
+## Premium AI Mentor and Razorpay
+
+The optional Premium plan costs ₹199 for 30 days and removes the 10-request daily AI Mentor limit for an authenticated account. Offline syntax checks and Python Practice Mode remain free.
+
+### Required Render environment variables
+
+Set these in the Nexora AI web service's Environment settings (do not commit them to GitHub):
+
+- `RAZORPAY_KEY_ID`: Razorpay API key ID.
+- `RAZORPAY_KEY_SECRET`: Razorpay API key secret; server-side only.
+- `RAZORPAY_WEBHOOK_SECRET`: a separate secret configured for the Razorpay webhook.
+- `ENABLE_AI_MENTOR=true` and `OPENAI_API_KEY`: required for AI-powered requests; otherwise the app stays in offline mode.
+
+After deployment, configure a Razorpay webhook to:
+`https://nexora-ai-tzgc.onrender.com/razorpay/webhook`
+Subscribe to the `payment.captured` event and use the same webhook secret in Render. Test with Razorpay Test Mode first. Do not accept real payments until checkout, signature verification, webhook retries, database persistence, and refunds/support procedures have been tested.
+
+The app verifies checkout signatures server-side and checks that the payment is captured before activating a plan. The daily limit is per authenticated user and uses the server's calendar date. Premium features require a working persistent PostgreSQL database; do not rely on ephemeral SQLite storage in production.
