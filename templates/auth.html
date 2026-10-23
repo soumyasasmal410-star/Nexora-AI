@@ -1,55 +1,267 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#080b16">
-<title>{{ 'Create account' if page == 'signup' else 'Log in' }} · Nexora AI</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ 'Create account' if page == 'signup' else 'Log in' }} - Nexora AI</title>
+<style>
+:root{--neon:#00f5d4;--violet:#7c5cff;--pink:#ff4fd8;--bg:#080b16;--panel:#0d1124;--text:#e8ecff;--muted:#9aa3c7;--err:#ff6b8b;--ok:#3ddc97}
+*{box-sizing:border-box}
+html{background:var(--bg)}                         /* body stays transparent so the 3D background (fx.js) shows */
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:var(--text);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:transparent}
+a{color:var(--neon)}
+.home{position:fixed;top:16px;left:20px;font-weight:700;text-decoration:none;color:var(--text);letter-spacing:.3px}
+.home b{color:var(--neon);text-shadow:0 0 10px #00f5d488}
+
+/* ---------- card ---------- */
+.auth{position:relative;width:min(940px,94vw);min-height:620px;border-radius:26px;overflow:hidden;
+  background:linear-gradient(160deg,rgba(18,22,48,.92),rgba(10,13,30,.92));backdrop-filter:blur(10px);
+  border:1px solid rgba(124,92,255,.55);box-shadow:0 0 40px rgba(124,92,255,.25),0 0 80px rgba(0,245,212,.08)}
+.pane{position:absolute;top:0;width:50%;height:100%;padding:34px 40px;display:flex;flex-direction:column;justify-content:center;
+  transition:opacity .45s ease,visibility .45s ease}
+.pane-login{left:0}
+.pane-signup{right:0;opacity:0;visibility:hidden}
+.auth.is-signup .pane-login{opacity:0;visibility:hidden}
+.auth.is-signup .pane-signup{opacity:1;visibility:visible}
+
+.brand{font-size:14px;font-weight:700;letter-spacing:.5px;color:var(--muted);text-align:center;margin:0 0 4px}
+.brand b{background:linear-gradient(90deg,var(--neon),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{margin:0;text-align:center;font-size:30px}
+.sub{margin:6px 0 18px;text-align:center;color:var(--muted);font-size:14px}
+
+/* ---------- fields ---------- */
+.field{margin:0 0 12px}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px;letter-spacing:.3px}
+.input{position:relative}
+input{width:100%;background:#0b0f20;color:var(--text);border:1px solid rgba(124,92,255,.35);border-radius:12px;
+  padding:12px 14px;font-size:15px;transition:border-color .2s,box-shadow .2s}
+input::placeholder{color:#5c6592}
+input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,245,212,.18),0 0 16px rgba(0,245,212,.25)}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);cursor:pointer;
+  padding:6px;border-radius:8px;display:grid;place-items:center}
+.eye:hover{color:var(--neon)} .eye:focus-visible{outline:2px solid var(--neon)}
+.eye svg{width:20px;height:20px}
+.input input[type=password],.input input.has-eye{padding-right:42px}
+.hint{min-height:16px;margin:5px 2px 0;font-size:12px;color:var(--muted)}
+.hint.bad{color:var(--err)} .hint.good{color:var(--ok)}
+
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:7px}
+.meter i{height:4px;border-radius:4px;background:#1a2040;transition:background .25s,box-shadow .25s}
+.meter[data-level="1"] i:nth-child(-n+1){background:var(--err)}
+.meter[data-level="2"] i:nth-child(-n+2){background:#ffb454}
+.meter[data-level="3"] i:nth-child(-n+3){background:#a6e22e}
+.meter[data-level="4"] i{background:var(--ok);box-shadow:0 0 8px #3ddc9788}
+.caps{display:none;color:#ffb454;font-size:12px;margin:4px 2px 0}
+
+.btn{width:100%;margin-top:6px;padding:13px;border:0;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;cursor:pointer;color:#06101a;background:linear-gradient(90deg,var(--neon),#59ffe6);
+  box-shadow:0 0 18px rgba(0,245,212,.45);transition:transform .15s,box-shadow .2s,opacity .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 28px rgba(0,245,212,.65)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.btn[disabled]{opacity:.65;cursor:progress;transform:none}
+.m-switch{display:none;margin:14px 0 0;text-align:center;font-size:14px;color:var(--muted)}
+.m-switch button{background:none;border:0;color:var(--neon);cursor:pointer;font-size:14px;text-decoration:underline}
+
+/* ---------- sliding overlay with 3D cube ---------- */
+.overlay{position:absolute;top:0;left:50%;width:50%;height:100%;z-index:5;overflow:hidden;
+  transition:transform .75s cubic-bezier(.77,0,.18,1);
+  background:radial-gradient(circle at 30% 20%,rgba(124,92,255,.55),transparent 55%),
+             radial-gradient(circle at 80% 85%,rgba(0,245,212,.40),transparent 55%),linear-gradient(160deg,#140c3a,#06222a)}
+.auth.is-signup .overlay{transform:translateX(-100%)}
+.scene{position:absolute;top:70px;left:50%;margin-left:-45px;width:90px;height:90px;perspective:600px}
+.cube{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:spin 16s linear infinite}
+.cube i{position:absolute;inset:0;border:1.5px solid var(--neon);background:rgba(0,245,212,.07);box-shadow:inset 0 0 16px rgba(0,245,212,.35)}
+.cube i:nth-child(1){transform:translateZ(45px)}
+.cube i:nth-child(2){transform:rotateY(180deg) translateZ(45px)}
+.cube i:nth-child(3){transform:rotateY(90deg) translateZ(45px)}
+.cube i:nth-child(4){transform:rotateY(-90deg) translateZ(45px)}
+.cube i:nth-child(5){transform:rotateX(90deg) translateZ(45px)}
+.cube i:nth-child(6){transform:rotateX(-90deg) translateZ(45px)}
+@keyframes spin{to{transform:rotateX(360deg) rotateY(360deg)}}
+.ov{position:absolute;left:0;right:0;top:200px;padding:0 38px;text-align:center;transition:opacity .45s ease,visibility .45s ease}
+.ov h2{margin:0 0 10px;font-size:30px;text-shadow:0 0 18px rgba(0,245,212,.45)}
+.ov p{margin:0 0 22px;color:#d4dbff;line-height:1.5;font-size:15px}
+.ov button{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.75);border-radius:30px;padding:11px 34px;
+  font-weight:700;letter-spacing:1.2px;cursor:pointer;text-transform:uppercase;font-size:13px;transition:background .2s,box-shadow .2s}
+.ov button:hover{background:rgba(255,255,255,.14);box-shadow:0 0 18px rgba(255,255,255,.35)}
+.ov button:focus-visible{outline:2px solid var(--neon);outline-offset:3px}
+.ov-signup{opacity:0;visibility:hidden}
+.auth.is-signup .ov-login{opacity:0;visibility:hidden}
+.auth.is-signup .ov-signup{opacity:1;visibility:visible}
+
+/* ---------- flash messages ---------- */
+.flashes{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:50;display:grid;gap:8px;width:min(480px,92vw)}
+.flash{padding:12px 16px;border-radius:12px;font-size:14px;border:1px solid;background:#0d1124;animation:drop .35s ease}
+.flash.error{border-color:var(--err);color:#ffc2d0} .flash.success{border-color:var(--ok);color:#c4f5de} .flash.info{border-color:var(--violet);color:#d7d0ff}
+@keyframes drop{from{opacity:0;transform:translateY(-10px)}}
+
+/* ---------- mobile: one form at a time ---------- */
+@media (max-width:760px){
+  .auth{min-height:0}
+  .pane{position:static;width:100%;height:auto;padding:32px 24px;opacity:1;visibility:visible}
+  .pane-signup{display:none}
+  .auth.is-signup .pane-login{display:none}
+  .auth.is-signup .pane-signup{display:flex}
+  .overlay{display:none}
+  .m-switch{display:block}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
 </head>
-<body class="auth-page">
-<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-<header class="topbar auth-topbar">
-  <a class="brand" href="/" aria-label="Nexora AI home"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a>
-  <a class="account-link" href="/">← Back to home</a>
-</header>
-<main class="auth-main">
-  <section class="auth-card">
-    <div class="tool-icon purple auth-icon">⌘</div>
-    <div class="eyebrow">{{ 'YOUR NEXT CHAPTER STARTS HERE' if page == 'signup' else 'WELCOME BACK' }}</div>
-    <h1>{{ 'Create your account.' if page == 'signup' else 'Log in to Nexora.' }}</h1>
-    <p class="auth-subtitle">{{ 'Create a secure account to get ready for your personal workspace.' if page == 'signup' else 'Sign in to continue to your Nexora AI workspace.' }}</p>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-list" aria-live="polite">
-          {% for category, message in messages %}
-            <div class="flash-message {{ category }}">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-    <form method="post" class="auth-form" autocomplete="on">
+<body>
+<a class="home" href="{{ url_for('home') }}" aria-label="Back to Nexora AI home">&larr; <b>Nexora</b> AI</a>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs %}<div class="flashes" role="alert">{% for cat, m in msgs %}<div class="flash {{ cat if cat in ('error','success','info') else 'info' }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
+
+<main class="auth {{ 'is-signup' if page == 'signup' else '' }}" id="auth"
+      data-login-url="{{ url_for('login') }}" data-signup-url="{{ url_for('signup') }}">
+
+  <!-- LOGIN -->
+  <section class="pane pane-login" id="pane-login" {{ 'inert' if page == 'signup' else '' }}>
+    <form method="post" action="{{ url_for('login') }}" id="f-login" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      {% if page == 'signup' %}
-      <label for="name">Full name</label>
-      <input id="name" name="name" type="text" maxlength="80" autocomplete="name" required value="{{ request.form.get('name', '') }}">
-      {% endif %}
-      <label for="email">Email address</label>
-      <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required value="{{ request.form.get('email', '') }}">
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" minlength="12" maxlength="128" autocomplete="{{ 'new-password' if page == 'signup' else 'current-password' }}" required>
-      {% if page == 'signup' %}
-      <label for="confirm_password">Confirm password</label>
-      <input id="confirm_password" name="confirm_password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required>
-      <p class="auth-help">Use at least 12 characters. A long passphrase is easier to remember and harder to guess.</p>
-      {% endif %}
-      <button class="btn primary auth-submit" type="submit">{{ 'Create account' if page == 'signup' else 'Log in' }} <span>→</span></button>
+      <p class="brand"><b>Nexora</b> AI</p>
+      <h1>Welcome back</h1>
+      <p class="sub">Log in to continue building</p>
+
+      <div class="field"><label for="l-email">Email</label>
+        <input id="l-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com"
+               value="{{ request.form.get('email', '') if page == 'login' else '' }}"></div>
+
+      <div class="field"><label for="l-pass">Password</label>
+        <div class="input"><input id="l-pass" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password">
+          <button class="eye" type="button" data-target="l-pass" aria-label="Show password" aria-pressed="false"></button></div>
+        <p class="caps" id="l-caps">Caps Lock is on</p>
+        <p class="hint" id="l-err" role="status" aria-live="polite"></p></div>
+
+      <button class="btn" type="submit">Log in</button>
+      <p class="m-switch">New here? <button type="button" data-go="signup">Create account</button></p>
     </form>
-    <p class="auth-switch">{% if page == 'signup' %}Already have an account? <a href="{{ url_for('login') }}">Log in</a>{% else %}New to Nexora AI? <a href="{{ url_for('signup') }}">Create an account</a>{% endif %}</p>
-    <p class="auth-privacy">Email verification is planned for a later phase. Keep your password private and use a unique one.</p>
   </section>
+
+  <!-- SIGN UP -->
+  <section class="pane pane-signup" id="pane-signup" {{ 'inert' if page != 'signup' else '' }}>
+    <form method="post" action="{{ url_for('signup') }}" id="f-signup" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <p class="brand"><b>Nexora</b> AI</p>
+      <h1>Create account</h1>
+      <p class="sub">Free to start - upgrade any time</p>
+
+      <div class="field"><label for="s-name">Full name</label>
+        <input id="s-name" name="name" type="text" autocomplete="name" maxlength="80" required placeholder="Your name"
+               value="{{ request.form.get('name', '') if page == 'signup' else '' }}"></div>
+
+      <div class="field"><label for="s-email">Email</label>
+        <input id="s-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com"
+               value="{{ request.form.get('email', '') if page == 'signup' else '' }}"></div>
+
+      <div class="field"><label for="s-pass">Password (12+ characters)</label>
+        <div class="input"><input id="s-pass" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required placeholder="At least 12 characters">
+          <button class="eye" type="button" data-target="s-pass" aria-label="Show password" aria-pressed="false"></button></div>
+        <div class="meter" id="meter" data-level="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <p class="hint" id="s-strength" aria-live="polite">0/12 characters</p></div>
+
+      <div class="field"><label for="s-conf">Confirm password</label>
+        <div class="input"><input id="s-conf" name="confirm_password" type="password" autocomplete="new-password" maxlength="128" required placeholder="Repeat password">
+          <button class="eye" type="button" data-target="s-conf" aria-label="Show password" aria-pressed="false"></button></div>
+        <p class="hint" id="s-match" aria-live="polite"></p></div>
+
+      <button class="btn" type="submit">Sign up</button>
+      <p class="m-switch">Already have an account? <button type="button" data-go="login">Log in</button></p>
+    </form>
+  </section>
+
+  <!-- SLIDING PANEL -->
+  <aside class="overlay">
+    <div class="scene" aria-hidden="true"><div class="cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="ov ov-login" {{ 'inert' if page == 'signup' else '' }}>
+      <h2>Hello there</h2><p>New to Nexora AI? Create your account and start your journey.</p>
+      <button type="button" data-go="signup">Sign up</button></div>
+    <div class="ov ov-signup" {{ 'inert' if page != 'signup' else '' }}>
+      <h2>Welcome back</h2><p>Already have an account? Log in to continue where you left off.</p>
+      <button type="button" data-go="login">Log in</button></div>
+  </aside>
 </main>
-<footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.</span><span>© <span id="year"></span> Nexora AI</span></footer>
-<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+
+<script>
+(() => {
+  const auth = document.getElementById('auth');
+  const $ = id => document.getElementById(id);
+  const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10.5 10.5 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+
+  /* show / hide password */
+  document.querySelectorAll('.eye').forEach(b => {
+    b.innerHTML = EYE;
+    b.addEventListener('click', () => {
+      const i = $(b.dataset.target), show = i.type === 'password';
+      i.type = show ? 'text' : 'password';
+      b.innerHTML = show ? EYE_OFF : EYE;
+      b.setAttribute('aria-pressed', String(show));
+      b.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+  });
+
+  /* slide between login and sign up (no page reload; URL updates so refresh keeps your place) */
+  function setMode(mode, focus) {
+    const signup = mode === 'signup';
+    auth.classList.toggle('is-signup', signup);
+    $('pane-login').toggleAttribute('inert', signup);
+    $('pane-signup').toggleAttribute('inert', !signup);
+    document.querySelector('.ov-login').toggleAttribute('inert', signup);
+    document.querySelector('.ov-signup').toggleAttribute('inert', !signup);
+    document.title = (signup ? 'Create account' : 'Log in') + ' - Nexora AI';
+    try { history.replaceState(null, '', signup ? auth.dataset.signupUrl : auth.dataset.loginUrl); } catch (e) {}
+    if (focus) setTimeout(() => $(signup ? 's-name' : 'l-email').focus(), 450);
+  }
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.go, true)));
+
+  /* caps lock hint on login */
+  $('l-pass').addEventListener('keyup', e => { $('l-caps').style.display = e.getModifierState && e.getModifierState('CapsLock') ? 'block' : 'none'; });
+
+  /* password strength (server requires 12-128 characters) */
+  const pass = $('s-pass'), conf = $('s-conf'), meter = $('meter');
+  const LABELS = ['', 'Weak', 'Okay', 'Good', 'Strong'];
+  function strength() {
+    const p = pass.value;
+    if (p.length < 12) { meter.dataset.level = p.length ? 1 : 0; $('s-strength').className = 'hint'; $('s-strength').textContent = p.length + '/12 characters'; return false; }
+    let lvl = 1 + (/[a-z]/.test(p) && /[A-Z]/.test(p) ? 1 : 0) + (/\d/.test(p) ? 1 : 0) + (/[^A-Za-z0-9]/.test(p) ? 1 : 0);
+    meter.dataset.level = lvl; $('s-strength').className = 'hint good'; $('s-strength').textContent = LABELS[lvl];
+    return true;
+  }
+  function match() {
+    const m = $('s-match');
+    if (!conf.value) { m.textContent = ''; m.className = 'hint'; return false; }
+    const ok = conf.value === pass.value;
+    m.textContent = ok ? 'Passwords match' : 'Passwords do not match'; m.className = 'hint ' + (ok ? 'good' : 'bad');
+    return ok;
+  }
+  pass.addEventListener('input', () => { strength(); match(); });
+  conf.addEventListener('input', match);
+
+  /* client-side checks (the server checks again) + double-submit guard */
+  const guard = (form, check) => form.addEventListener('submit', e => {
+    const msg = check();
+    if (msg) { e.preventDefault(); return; }
+    const btn = form.querySelector('.btn'); btn.disabled = true; btn.textContent = 'Please wait...';
+  });
+  guard($('f-login'), () => {
+    const err = $('l-err'); err.className = 'hint bad';
+    if (!$('l-email').value.trim() || !$('l-pass').value) { err.textContent = 'Enter your email and password.'; return true; }
+    err.textContent = ''; return false;
+  });
+  guard($('f-signup'), () => {
+    if (!$('s-name').value.trim() || !$('s-email').validity.valid || !$('s-email').value) { $('s-match').className = 'hint bad'; $('s-match').textContent = 'Enter your name and a valid email.'; return true; }
+    if (!strength()) { pass.focus(); return true; }
+    if (!match()) { conf.focus(); return true; }
+    return false;
+  });
+})();
+</script>
+<script>window.NEXORA_FX = "auth";</script>
 <script src="{{ url_for('static', filename='fx.js') }}" defer></script>
-</body></html>
+</body>
+</html>
