@@ -50,6 +50,8 @@ class User(UserMixin, db.Model):
 
 from premium import premium_bp, init_premium
 from premium_extras import extras_bp, init_extras
+from ast3d import init_ast3d
+init_ast3d(app, limiter)
 
 init_premium(app, db, User)
 app.register_blueprint(premium_bp)
