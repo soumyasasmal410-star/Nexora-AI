@@ -161,3 +161,129 @@ main, section, .section, .mentor-section, .mentor-shell, .mentor-main,
 .nexora-cursor-trail{width:5px;height:5px;border-radius:50%;background:var(--trail-color,#00f5d4);box-shadow:0 0 12px var(--trail-color,#00f5d4);transform:translate(-50%,-50%) scale(1);transition:opacity .5s ease,transform .5s ease}
 .nexora-cursor-trail.nexora-trail-fade{opacity:0;transform:translate(-50%,-50%) scale(.1)}
 @media(pointer:coarse),(prefers-reduced-motion:reduce){.nexora-cursor-dot,.nexora-cursor-ring,.nexora-cursor-trail{display:none!important}}
+
+/* Nexora AI — Cyber Teal / Midnight Navy futuristic palette
+   Additive theme layer: preserves existing layout, routes and component behavior. */
+:root {
+  color-scheme: dark;
+  --bg: #080B16;
+  --panel: #101528;
+  --panel2: #121A30;
+  --line: #25304A;
+  --text: #E8ECFF;
+  --muted: #A7B2CC;
+  --purple: #7C5CFF;
+  --cyan: #00F5D4;
+  --green: #53F2B4;
+  --radius: 22px;
+
+  --nexora-bg: #080B16;
+  --nexora-surface: #101528;
+  --nexora-surface-raised: #151D35;
+  --nexora-border: rgba(151, 171, 220, .18);
+  --nexora-teal: #00F5D4;
+  --nexora-violet: #7C5CFF;
+  --nexora-text: #E8ECFF;
+  --nexora-muted: #A7B2CC;
+  --nexora-glow-teal: 0 0 28px rgba(0, 245, 212, .16);
+  --nexora-glow-violet: 0 0 30px rgba(124, 92, 255, .22);
+}
+
+/* Ambient lighting */
+body { background: var(--nexora-bg); color: var(--nexora-text); }
+.ambient-one { background: var(--nexora-violet); opacity: .16; }
+.ambient-two { background: var(--nexora-teal); opacity: .11; }
+
+/* Brand and navigation */
+.brand b, .top-cta span { color: var(--nexora-teal); }
+.brand-mark {
+  background: linear-gradient(140deg, var(--nexora-teal), var(--nexora-violet));
+  box-shadow: 0 0 28px rgba(0, 245, 212, .22);
+}
+.topbar {
+  background: rgba(8, 11, 22, .88);
+  border-bottom-color: rgba(151, 171, 220, .12);
+}
+.topbar nav { color: var(--nexora-muted); }
+.topbar nav a:hover, .account-link:hover { color: var(--nexora-teal); }
+.top-cta {
+  border-color: rgba(0, 245, 212, .32);
+  background: linear-gradient(135deg, rgba(0, 245, 212, .08), rgba(124, 92, 255, .12));
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.top-cta:hover { border-color: var(--nexora-teal); box-shadow: var(--nexora-glow-teal); transform: translateY(-1px); }
+
+/* Headings and high-value accents */
+.eyebrow { color: #9CEFE4; }
+.live-dot { background: var(--nexora-teal); box-shadow: 0 0 13px rgba(0, 245, 212, .75); }
+.hero h1 span, .section-heading h2 span, .closing h2 span {
+  background-image: linear-gradient(105deg, var(--nexora-teal) 0%, #69E8F5 42%, #A18AFF 100%);
+}
+.hero-sub, .tool-card p, .muted-link { color: var(--nexora-muted); }
+
+/* Buttons: teal primary, violet secondary */
+.btn.primary {
+  color: #041411;
+  background: linear-gradient(110deg, #00F5D4, #69E8F5);
+  box-shadow: 0 8px 28px rgba(0, 245, 212, .16);
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 34px rgba(0, 245, 212, .25);
+  filter: saturate(1.08);
+}
+.btn.ghost {
+  border: 1px solid rgba(124, 92, 255, .45);
+  background: rgba(124, 92, 255, .08);
+}
+.btn.ghost:hover { border-color: var(--nexora-teal); box-shadow: var(--nexora-glow-violet); }
+
+/* Cards and panels */
+.tool-card, .hero-visual, .mentor-panel, .code-window, .feature-card {
+  border-color: var(--nexora-border);
+}
+.tool-card {
+  background: linear-gradient(145deg, rgba(21, 29, 53, .92), rgba(16, 21, 40, .96));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+.tool-card:hover {
+  border-color: rgba(0, 245, 212, .42);
+  box-shadow: var(--nexora-glow-teal), 0 18px 48px rgba(0, 0, 0, .22);
+}
+.tool-icon { box-shadow: 0 0 22px rgba(124, 92, 255, .12); }
+.tool-tag { color: var(--nexora-teal); }
+.tool-tag.soon { color: #B6A7FF; }
+.card-code, .hero-visual .float-card {
+  border-color: rgba(124, 92, 255, .3);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .24), var(--nexora-glow-violet);
+}
+
+/* Form controls and code editor surfaces */
+input, textarea, select {
+  color: var(--nexora-text);
+  accent-color: var(--nexora-teal);
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: rgba(0, 245, 212, .72);
+  box-shadow: 0 0 0 3px rgba(0, 245, 212, .10);
+}
+::selection { color: #041411; background: rgba(0, 245, 212, .78); }
+
+/* Keyboard focus stays visible for accessibility */
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--nexora-teal);
+  outline-offset: 3px;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
