@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ 'Create account' if page == 'signup' else 'Log in' }} - Nexora AI</title>
 <style>
-:root{color-scheme:dark;--neon:#00f5d4;--violet:#7c5cff;--pink:#ff4fd8;--bg:#080b16;--panel:#0d1124;--text:#e8ecff;--muted:#9aa3c7;--err:#ff6b8b;--ok:#3ddc97}
+:root{color-scheme:dark;--neon:#00ff9c;--violet:#19b6ff;--pink:#ff4fd8;--bg:#04070a;--panel:#0a1014;--text:#d9fbe9;--muted:#7fa393;--err:#ff6b8b;--ok:#00ff9c;--mono:"JetBrains Mono","Fira Code","Cascadia Code",ui-monospace,Consolas,Menlo,monospace}
 *{box-sizing:border-box}
 html{background:var(--bg)}                         /* body stays transparent so the 3D background shows */
 body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:var(--text);
-  font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:transparent}
+  font-family:var(--mono);background:transparent}
 a{color:var(--neon)}
 .home{position:fixed;top:16px;left:20px;font-weight:700;text-decoration:none;color:var(--text);letter-spacing:.3px}
 .home b{color:var(--neon);text-shadow:0 0 10px #00f5d488}
 
 /* ---------- card ---------- */
 .auth{position:relative;width:min(940px,94vw);min-height:620px;border-radius:26px;overflow:hidden;
-  background:linear-gradient(160deg,rgba(18,22,48,.97),rgba(10,13,30,.97));
-  border:1px solid rgba(124,92,255,.55);box-shadow:0 0 40px rgba(124,92,255,.25),0 0 80px rgba(0,245,212,.08)}
+  background:linear-gradient(160deg,rgba(8,16,16,.97),rgba(4,9,10,.97));
+  border:1px solid rgba(0,255,156,.35);box-shadow:0 0 36px rgba(0,255,156,.12),0 0 90px rgba(25,182,255,.08)}
+.auth::before,.auth::after{content:'';position:absolute;width:22px;height:22px;z-index:8;pointer-events:none;border:2px solid var(--neon);opacity:.8}
+.auth::before{top:10px;left:10px;border-right:0;border-bottom:0;border-top-left-radius:6px}
+.auth::after{bottom:10px;right:10px;border-left:0;border-top:0;border-bottom-right-radius:6px}
 .pane{position:absolute;top:0;width:50%;height:100%;padding:34px 40px;display:flex;flex-direction:column;justify-content:center;
   transition:opacity .45s ease,visibility .45s ease}
 .pane-login{left:0}
@@ -27,37 +30,38 @@ a{color:var(--neon)}
 
 .brand{font-size:14px;font-weight:700;letter-spacing:.5px;color:var(--muted);text-align:center;margin:0 0 4px}
 .brand b{background:linear-gradient(90deg,var(--neon),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
-h1{margin:0;text-align:center;font-size:30px}
-.sub{margin:6px 0 18px;text-align:center;color:var(--muted);font-size:14px}
+h1{margin:0;text-align:center;font-size:26px;letter-spacing:.5px;text-shadow:0 0 14px rgba(0,255,156,.35)}
+.sub{margin:6px 0 20px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.4px}
 
 /* ---------- fields ---------- */
 .field{margin:0 0 12px}
-label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px;letter-spacing:.3px}
+label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;letter-spacing:1.2px;text-transform:uppercase}
+label::before{content:'> ';color:var(--neon)}
 .input{position:relative}
-input{width:100%;background:#0b0f20;color:var(--text);border:1px solid rgba(124,92,255,.35);border-radius:12px;
+input{font-family:var(--mono);width:100%;background:#07120f;color:var(--text);border:1px solid rgba(0,255,156,.22);border-radius:8px;
   padding:12px 14px;font-size:15px;transition:border-color .2s,box-shadow .2s}
 input::placeholder{color:#5c6592}
-input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,245,212,.18),0 0 16px rgba(0,245,212,.25)}
+input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,255,156,.16),0 0 16px rgba(0,255,156,.22)}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);cursor:pointer;
   padding:6px;border-radius:8px;display:grid;place-items:center}
 .eye:hover{color:var(--neon)} .eye:focus-visible{outline:2px solid var(--neon)}
 .eye svg{width:20px;height:20px}
 .input input[type=password],.input input.has-eye{padding-right:42px}
-.hint{min-height:16px;margin:5px 2px 0;font-size:12px;color:var(--muted)}
+.hint{min-height:16px;margin:5px 2px 0;font-size:11px;color:var(--muted)}
 .hint.bad{color:var(--err)} .hint.good{color:var(--ok)}
 
 .meter{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:7px}
-.meter i{height:4px;border-radius:4px;background:#1a2040;transition:background .25s,box-shadow .25s}
+.meter i{height:4px;border-radius:2px;background:#10241c;transition:background .25s,box-shadow .25s}
 .meter[data-level="1"] i:nth-child(-n+1){background:var(--err)}
 .meter[data-level="2"] i:nth-child(-n+2){background:#ffb454}
 .meter[data-level="3"] i:nth-child(-n+3){background:#a6e22e}
 .meter[data-level="4"] i{background:var(--ok);box-shadow:0 0 8px #3ddc9788}
 .caps{display:none;color:#ffb454;font-size:12px;margin:4px 2px 0}
 
-.btn{width:100%;margin-top:6px;padding:13px;border:0;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:1.2px;
-  text-transform:uppercase;cursor:pointer;color:#06101a;background:linear-gradient(90deg,var(--neon),#59ffe6);
-  box-shadow:0 0 18px rgba(0,245,212,.45);transition:transform .15s,box-shadow .2s,opacity .2s}
-.btn:hover{transform:translateY(-1px);box-shadow:0 0 28px rgba(0,245,212,.65)}
+.btn{width:100%;margin-top:6px;padding:13px;border:0;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:2px;font-family:var(--mono);
+  text-transform:uppercase;cursor:pointer;color:#02130c;background:linear-gradient(90deg,var(--neon),#5dffc4);
+  box-shadow:0 0 18px rgba(0,255,156,.4);transition:transform .15s,box-shadow .2s,opacity .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 28px rgba(0,255,156,.6)}
 .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .btn[disabled]{opacity:.65;cursor:progress;transform:none}
 .m-switch{display:none;margin:14px 0 0;text-align:center;font-size:14px;color:var(--muted)}
@@ -66,26 +70,21 @@ input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,24
 /* ---------- sliding overlay with 3D cube ---------- */
 .overlay{position:absolute;top:0;left:50%;width:50%;height:100%;z-index:5;overflow:hidden;
   transition:transform .75s cubic-bezier(.77,0,.18,1);
-  background:radial-gradient(circle at 30% 20%,rgba(124,92,255,.55),transparent 55%),
-             radial-gradient(circle at 80% 85%,rgba(0,245,212,.40),transparent 55%),linear-gradient(160deg,#140c3a,#06222a)}
+  background:radial-gradient(circle at 30% 18%,rgba(25,182,255,.22),transparent 55%),radial-gradient(circle at 80% 88%,rgba(0,255,156,.22),transparent 55%),linear-gradient(160deg,#04141a,#03100b);
+  border-left:1px solid rgba(0,255,156,.25)}
+.overlay::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);opacity:.5}
 .auth.is-signup .overlay{transform:translateX(-100%)}
-.scene{position:absolute;top:70px;left:50%;margin-left:-45px;width:90px;height:90px;perspective:600px}
-.cube{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:spin 16s linear infinite}
-.cube i{position:absolute;inset:0;border:1.5px solid var(--neon);background:rgba(0,245,212,.07);box-shadow:inset 0 0 16px rgba(0,245,212,.35)}
-.cube i:nth-child(1){transform:translateZ(45px)}
-.cube i:nth-child(2){transform:rotateY(180deg) translateZ(45px)}
-.cube i:nth-child(3){transform:rotateY(90deg) translateZ(45px)}
-.cube i:nth-child(4){transform:rotateY(-90deg) translateZ(45px)}
-.cube i:nth-child(5){transform:rotateX(90deg) translateZ(45px)}
-.cube i:nth-child(6){transform:rotateX(-90deg) translateZ(45px)}
-@keyframes spin{to{transform:rotateX(360deg) rotateY(360deg)}}
-.ov{position:absolute;left:0;right:0;top:200px;padding:0 38px;text-align:center;transition:opacity .45s ease,visibility .45s ease}
-.ov h2{margin:0 0 10px;font-size:30px;text-shadow:0 0 18px rgba(0,245,212,.45)}
-.ov p{margin:0 0 22px;color:#d4dbff;line-height:1.5;font-size:15px}
-.ov button{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.75);border-radius:30px;padding:11px 34px;
-  font-weight:700;letter-spacing:1.2px;cursor:pointer;text-transform:uppercase;font-size:13px;transition:background .2s,box-shadow .2s}
-.ov button:hover{background:rgba(255,255,255,.14);box-shadow:0 0 18px rgba(255,255,255,.35)}
-.ov button:focus-visible{outline:2px solid var(--neon);outline-offset:3px}
+#globe{position:absolute;top:40px;left:50%;margin-left:-110px;width:220px;height:220px}
+.ov{position:absolute;left:0;right:0;top:282px;padding:0 38px;text-align:center;transition:opacity .45s ease,visibility .45s ease}
+.ov h2{margin:0 0 10px;font-size:24px;letter-spacing:.5px;text-shadow:0 0 16px rgba(0,255,156,.45)}
+.ov h2::after{content:'_';color:var(--neon);margin-left:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.tag{display:block;margin:0 0 8px;font-size:11px;letter-spacing:1.5px;color:var(--neon);opacity:.85}
+.ov p{margin:0 0 22px;color:#b9e9d3;line-height:1.6;font-size:13px}
+.ov button{background:transparent;color:var(--neon);border:1px solid rgba(0,255,156,.7);border-radius:6px;padding:11px 30px;font-family:var(--mono);
+  font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;font-size:13px;transition:background .2s,box-shadow .2s}
+.ov button:hover{background:rgba(0,255,156,.12);box-shadow:0 0 18px rgba(0,255,156,.35)}
+.ov button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .ov-signup{opacity:0;visibility:hidden}
 .auth.is-signup .ov-login{opacity:0;visibility:hidden}
 .auth.is-signup .ov-signup{opacity:1;visibility:visible}
@@ -100,13 +99,13 @@ input:focus{outline:none;border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,24
 /* Chrome autofill paints saved logins light blue/white - keep them dark */
 input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,input:-webkit-autofill:active{
   -webkit-text-fill-color:var(--text);caret-color:var(--text);
-  -webkit-box-shadow:0 0 0 1000px #0b0f20 inset;box-shadow:0 0 0 1000px #0b0f20 inset;
-  border-color:rgba(124,92,255,.35);transition:background-color 9999s ease-out 0s}
+  -webkit-box-shadow:0 0 0 1000px #07120f inset;box-shadow:0 0 0 1000px #07120f inset;
+  border-color:rgba(0,255,156,.22);transition:background-color 9999s ease-out 0s}
 input:-webkit-autofill:focus{border-color:var(--neon)}
 
 /* built-in 3D background + cursor glow (no external file needed) */
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
-#spot{position:fixed;left:0;top:0;width:520px;height:520px;margin:-260px 0 0 -260px;z-index:-1;pointer-events:none;background:radial-gradient(circle,rgba(124,92,255,.18),rgba(124,92,255,0) 65%);opacity:0;transition:opacity .3s;will-change:transform}
+#spot{position:fixed;left:0;top:0;width:520px;height:520px;margin:-260px 0 0 -260px;z-index:-1;pointer-events:none;background:radial-gradient(circle,rgba(0,255,156,.10),rgba(0,255,156,0) 65%);opacity:0;transition:opacity .3s;will-change:transform}
 
 /* ---------- mobile: one form at a time ---------- */
 @media (max-width:760px){
@@ -136,8 +135,8 @@ input:-webkit-autofill:focus{border-color:var(--neon)}
     <form method="post" action="{{ url_for('login') }}" id="f-login" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <p class="brand"><b>Nexora</b> AI</p>
-      <h1>Welcome back</h1>
-      <p class="sub">Log in to continue building</p>
+      <h1>Authenticate</h1>
+      <p class="sub">// log in to your workspace</p>
 
       <div class="field"><label for="l-email">Email</label>
         <input id="l-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com"
@@ -159,8 +158,8 @@ input:-webkit-autofill:focus{border-color:var(--neon)}
     <form method="post" action="{{ url_for('signup') }}" id="f-signup" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <p class="brand"><b>Nexora</b> AI</p>
-      <h1>Create account</h1>
-      <p class="sub">Free to start - upgrade any time</p>
+      <h1>Initialize account</h1>
+      <p class="sub">// free to start, upgrade any time</p>
 
       <div class="field"><label for="s-name">Full name</label>
         <input id="s-name" name="name" type="text" autocomplete="name" maxlength="80" required placeholder="Your name"
@@ -188,12 +187,12 @@ input:-webkit-autofill:focus{border-color:var(--neon)}
 
   <!-- SLIDING PANEL -->
   <aside class="overlay">
-    <div class="scene" aria-hidden="true"><div class="cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <canvas id="globe" width="440" height="440" aria-hidden="true"></canvas>
     <div class="ov ov-login" {{ 'inert' if page == 'signup' else '' }}>
-      <h2>Hello there</h2><p>New to Nexora AI? Create your account and start your journey.</p>
+      <span class="tag">[ NEW USER ]</span><h2>Hello there</h2><p>New to Nexora AI? Create your account and start your journey.</p>
       <button type="button" data-go="signup">Sign up</button></div>
     <div class="ov ov-signup" {{ 'inert' if page != 'signup' else '' }}>
-      <h2>Welcome back</h2><p>Already have an account? Log in to continue where you left off.</p>
+      <span class="tag">[ RETURNING USER ]</span><h2>Welcome back</h2><p>Already have an account? Log in to continue where you left off.</p>
       <button type="button" data-go="login">Log in</button></div>
   </aside>
 </main>
@@ -275,50 +274,79 @@ input:-webkit-autofill:focus{border-color:var(--neon)}
 </script>
 <canvas id="bg" aria-hidden="true"></canvas><div id="spot" aria-hidden="true"></div>
 <script>
-/* neon wireframe cubes (own 3D maths) + cursor glow. Mouse input is smoothed so nothing jitters. */
+/* hacker-style visuals: faint code rain behind the page + a rotating 3D data globe in the panel.
+   Own canvas maths, no libraries. Mouse input is eased so nothing jitters. */
 (() => {
-  const cv = document.getElementById('bg'), ctx = cv.getContext('2d'), spot = document.getElementById('spot');
-  if (!ctx) return;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
-  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-  const R = (a = 1) => (Math.random() - .5) * a;
-  let W = 0, H = 0;
-  const tgt = {x: 0, y: 0}, cur = {x: 0, y: 0}, px = {x: innerWidth / 2, y: innerHeight / 2}, sp = {x: px.x, y: px.y};
-  const cubes = Array.from({length: 16}, (_, i) => ({x: R(16), y: R(9), z: 4 + Math.random() * 8, s: .5 + Math.random() * 1.1,
-    rx: Math.random() * 6, ry: Math.random() * 6, vx: R(.008), vy: .003 + Math.random() * .006, c: i % 2 ? '124,92,255' : '0,245,212'}));
-  const fit = () => { W = innerWidth; H = innerHeight; cv.width = W; cv.height = H; };   // 1x resolution: smooth and light
-  fit(); addEventListener('resize', fit);
+  const spot = document.getElementById('spot');
+  const mouse = {x: 0, y: 0}, ease = {x: 0, y: 0}, px = {x: innerWidth / 2, y: innerHeight / 2}, sp = {x: px.x, y: px.y};
   addEventListener('mousemove', e => {
-    tgt.x = e.clientX / W * 2 - 1; tgt.y = e.clientY / H * 2 - 1; px.x = e.clientX; px.y = e.clientY; spot.style.opacity = 1;
+    mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = e.clientY / innerHeight * 2 - 1;
+    px.x = e.clientX; px.y = e.clientY; spot.style.opacity = 1;
   }, {passive: true});
   document.addEventListener('mouseleave', () => { spot.style.opacity = 0; });
-  let running = true;
-  document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) requestAnimationFrame(draw); });
-  function draw() {
-    if (!running) return;
-    cur.x += (tgt.x - cur.x) * .05; cur.y += (tgt.y - cur.y) * .05;      // eased parallax (no sudden jumps)
-    sp.x += (px.x - sp.x) * .18;  sp.y += (px.y - sp.y) * .18;           // eased glow
-    spot.style.transform = 'translate3d(' + sp.x.toFixed(1) + 'px,' + sp.y.toFixed(1) + 'px,0)';
-    ctx.clearRect(0, 0, W, H);
-    const f = Math.min(W, H) * .9;
-    for (const c of cubes) {
-      if (!still) { c.rx += c.vx; c.ry += c.vy; }
-      const sx = Math.sin(c.rx), cx = Math.cos(c.rx), sy = Math.sin(c.ry), cy = Math.cos(c.ry);
-      const P = V.map(([x, y, z]) => {
-        let Y = y * cx - z * sx, Z = y * sx + z * cx;
-        let X = x * cy + Z * sy; Z = -x * sy + Z * cy;
-        X = X * c.s + c.x - cur.x * 1.2; Y = Y * c.s + c.y - cur.y * .8; Z = Z * c.s + c.z;
-        const k = f / Z; return [W / 2 + X * k, H / 2 + Y * k];
-      });
-      const a = Math.max(.12, Math.min(.7, 1.3 - c.z / 9));
-      ctx.strokeStyle = 'rgba(' + c.c + ',' + a + ')'; ctx.lineWidth = 1.2; ctx.beginPath();
-      for (const [i, j] of E) { ctx.moveTo(P[i][0], P[i][1]); ctx.lineTo(P[j][0], P[j][1]); }
-      ctx.stroke();
-    }
-    requestAnimationFrame(draw);
+
+  /* ---- code rain ---- */
+  const bg = document.getElementById('bg'), rc = bg.getContext('2d');
+  const GL = '01<>/{}[]$#%&=+*ABCDEF0123456789', FS = 16, TRAIL = 9;
+  let W = 0, H = 0, cols = 0, drops = [];
+  function fit() {
+    W = bg.width = innerWidth; H = bg.height = innerHeight; cols = Math.ceil(W / (FS * 1.3));
+    drops = Array.from({length: cols}, () => ({y: Math.random() * H / FS, v: .25 + Math.random() * .5, k: (Math.random() * 99) | 0}));
+    rc.font = FS + 'px ui-monospace,Consolas,monospace';
   }
-  draw();
+  fit(); addEventListener('resize', fit);
+  function rain(dt) {
+    rc.clearRect(0, 0, W, H);
+    drops.forEach((d, i) => {
+      d.y += d.v * dt * .02; if (d.y * FS - TRAIL * FS > H) { d.y = 0; d.v = .25 + Math.random() * .5; }
+      for (let t = 0; t < TRAIL; t++) {
+        const row = Math.floor(d.y) - t; if (row < 0) continue;
+        const ch = GL[(i * 31 + row * 17 + d.k) % GL.length], a = t === 0 ? .55 : .26 * (1 - t / TRAIL);
+        rc.fillStyle = t === 0 ? 'rgba(190,255,225,' + a + ')' : 'rgba(0,255,156,' + a + ')';
+        rc.fillText(ch, i * FS * 1.3, row * FS);
+      }
+    });
+  }
+
+  /* ---- 3D data globe (wire sphere + network nodes) ---- */
+  const gl = document.getElementById('globe'), gc = gl.getContext('2d'), GS = gl.width, R = GS * .42, C = GS / 2;
+  const nodes = Array.from({length: 46}, () => { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = Math.sqrt(1 - u * u);
+    return [r * Math.cos(a), u, r * Math.sin(a), Math.random() * 6]; });
+  const links = []; nodes.forEach((p, i) => nodes.forEach((q, j) => { if (j > i && (p[0]-q[0])**2 + (p[1]-q[1])**2 + (p[2]-q[2])**2 < .42) links.push([i, j]); }));
+  function rot(x, y, z, ay, ax) {
+    let X = x * Math.cos(ay) + z * Math.sin(ay), Z = -x * Math.sin(ay) + z * Math.cos(ay);
+    let Y = y * Math.cos(ax) - Z * Math.sin(ax); Z = y * Math.sin(ax) + Z * Math.cos(ax); return [X, Y, Z];
+  }
+  function globe(t) {
+    gc.clearRect(0, 0, GS, GS);
+    const ay = t * .00025 + ease.x * .5, ax = .38 + ease.y * .25;
+    const proj = (x, y, z) => { const [X, Y, Z] = rot(x, y, z, ay, ax); return [C + X * R, C + Y * R, Z]; };
+    gc.lineWidth = 1;
+    const line = (pts) => { for (let i = 1; i < pts.length; i++) {            // draw as segments so back side can be dimmer
+      const a = pts[i - 1], b = pts[i], front = (a[2] + b[2]) / 2 > 0;
+      gc.strokeStyle = front ? 'rgba(0,255,156,.55)' : 'rgba(0,255,156,.13)'; gc.beginPath(); gc.moveTo(a[0], a[1]); gc.lineTo(b[0], b[1]); gc.stroke(); } };
+    for (let k = -2; k <= 2; k++) { const lat = k * .5, pts = []; for (let s = 0; s <= 40; s++) { const lon = s / 40 * 6.283; pts.push(proj(Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon))); } line(pts); }
+    for (let m = 0; m < 8; m++) { const lon = m / 8 * 3.1416, pts = []; for (let s = 0; s <= 40; s++) { const la = s / 40 * 6.283; pts.push(proj(Math.cos(la) * Math.cos(lon), Math.sin(la), Math.cos(la) * Math.sin(lon))); } line(pts); }
+    const P = nodes.map(n => proj(n[0], n[1], n[2]));
+    gc.strokeStyle = 'rgba(25,182,255,.55)';
+    links.forEach(([i, j]) => { if (P[i][2] > -.1 && P[j][2] > -.1) { gc.beginPath(); gc.moveTo(P[i][0], P[i][1]); gc.lineTo(P[j][0], P[j][1]); gc.stroke(); } });
+    P.forEach((p, i) => { const pulse = .55 + .45 * Math.sin(t * .003 + nodes[i][3]), a = p[2] > 0 ? .95 : .25;
+      gc.fillStyle = 'rgba(190,255,225,' + a * pulse + ')'; gc.beginPath(); gc.arc(p[0], p[1], p[2] > 0 ? 3 : 1.8, 0, 6.283); gc.fill(); });
+  }
+
+  let last = performance.now(), running = true;
+  function frame(now) {
+    if (!running) return;
+    const dt = Math.min(now - last, 60); last = now;
+    ease.x += (mouse.x - ease.x) * .05; ease.y += (mouse.y - ease.y) * .05;
+    sp.x += (px.x - sp.x) * .18; sp.y += (px.y - sp.y) * .18;
+    spot.style.transform = 'translate3d(' + sp.x.toFixed(1) + 'px,' + sp.y.toFixed(1) + 'px,0)';
+    rain(dt); globe(now);
+    if (!still) requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running && !still) { last = performance.now(); requestAnimationFrame(frame); } });
+  requestAnimationFrame(frame);
 })();
 </script>
 </body>
