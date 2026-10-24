@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
-from claude_mentor import ai_configured, analyze_with_claude, chat_with_claude, friendly_error
+from ai_mentor import ai_configured, ai_company, ai_name, analyze_with_ai, chat_with_ai, friendly_error
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024  # 64 KB request limit
@@ -328,7 +328,7 @@ def analyze_locally(code: str, question: str, mode: str) -> dict:
 
 @app.get("/")
 def home():
-    return render_template("index.html", ai_enabled=ai_configured())
+    return render_template("index.html", ai_enabled=ai_configured(), ai_name=ai_name(), ai_company=ai_company())
 
 
 @app.get("/health")
@@ -405,7 +405,7 @@ def logout():
 @login_required
 def dashboard():
     from premium import plan_overview
-    return render_template("dashboard.html", plan=plan_overview(current_user), ai_enabled=ai_configured())
+    return render_template("dashboard.html", plan=plan_overview(current_user), ai_enabled=ai_configured(), ai_name=ai_name())
 
 
 def _ai_gate():
@@ -440,7 +440,7 @@ def mentor():
             return blocked
 
     local_result = analyze_locally(code, question, mode)
-    result = analyze_with_claude(code, question, mode, local_result, premium)
+    result = analyze_with_ai(code, question, mode, local_result, premium)
 
     if ai_requested:
         from premium import plan_overview, refund_usage
@@ -481,7 +481,7 @@ def mentor_chat():
 
     from premium import plan_overview, refund_usage
     try:
-        reply = chat_with_claude(code, history, message, syntax_note, premium, mode)
+        reply = chat_with_ai(code, history, message, syntax_note, premium, mode)
     except Exception as exc:
         app.logger.warning("AI chat failed: %s", exc.__class__.__name__)   # class name only, never user code
         refund_usage(current_user)
