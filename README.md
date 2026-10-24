@@ -9,13 +9,14 @@ Nexora AI is a standalone AI-powered tools platform for students, developers, an
 - Python syntax validation and beginner-friendly guidance.
 - Modes for hints, debugging, code explanation, and improvement suggestions.
 - Free offline mode by default, with AST-based syntax checks, common-pattern diagnostics, worked examples, and a local Python practice quiz.
-- Optional server-side OpenAI Responses API integration, disabled unless explicitly enabled.
+- Claude-powered AI Mentor (Anthropic API): structured reviews, suggested fixes, Hindi/Hinglish replies and a follow-up chat. Off unless explicitly enabled.
+- Free users get the fast model; Premium gets the most capable model and unlimited requests.
 - Local guidance never executes submitted code.
 - Practice answers are checked locally against small fixed exercises; they do not execute user-provided code.
 - Does not execute submitted code.
 - Health endpoint at `/health`.
 
-When OPENAI_API_KEY is configured, submitted code and the optional question are sent to OpenAI for processing. This app does not save submitted code to an account or database. Review your provider settings and privacy needs before sharing sensitive code. Without the key, the mentor uses local syntax checks and rule-based hints.
+When the AI Mentor is enabled, submitted code, the optional question and (for follow-ups) the chat messages are sent to Anthropic's Claude API for that request. This app does not save submitted code or chat history to an account or database; the chat lives only in the browser tab. Review your provider settings and privacy needs before sharing sensitive code. Without an API key, the mentor uses local syntax checks and rule-based hints.
 
 ## Run locally
 ```bash
@@ -33,12 +34,12 @@ Create a **new Web Service** from this repository, not the existing My Portfolio
 - Start command: `gunicorn app:app`
 - Health check path: `/health`
 
-For the default free/offline mode, no API key or paid API credits are needed. To opt into AI mode later, add these environment variables in Render (never commit secrets):
+For the default free/offline mode, no API key or paid API credits are needed. To switch on the Claude AI Mentor, add these environment variables in Render (never commit secrets):
 - ENABLE_AI_MENTOR: set to true to enable model calls; default is false.
-- OPENAI_API_KEY: your OpenAI API key.
-- OPENAI_MODEL: optional model override; defaults to gpt-5-mini.
+- ANTHROPIC_API_KEY: your key from console.anthropic.com.
+- ANTHROPIC_MODEL_FREE / ANTHROPIC_MODEL_PREMIUM: optional model overrides (defaults: claude-haiku-5-5 and claude-sonnet-5-5).
 
-The OpenAI API may incur usage charges. Set API spending limits/alerts in your provider dashboard and monitor usage before making the service public.
+The Anthropic API is billed separately from any claude.ai subscription and incurs usage charges. Set API spending limits/alerts in your provider dashboard and monitor usage before making the service public.
 
 ## Planned roadmap
 1. Add a persistent rate limiter and usage visibility before public launch.
@@ -80,10 +81,20 @@ Set these in the Nexora AI web service's Environment settings (do not commit the
 - `RAZORPAY_KEY_ID`: Razorpay API key ID.
 - `RAZORPAY_KEY_SECRET`: Razorpay API key secret; server-side only.
 - `RAZORPAY_WEBHOOK_SECRET`: a separate secret configured for the Razorpay webhook.
-- `ENABLE_AI_MENTOR=true` and `OPENAI_API_KEY`: required for AI-powered requests; otherwise the app stays in offline mode.
+- `ENABLE_AI_MENTOR=true` and `ANTHROPIC_API_KEY`: required for AI-powered requests; otherwise the app stays in offline mode.
 
 After deployment, configure a Razorpay webhook to:
 `https://nexora-ai-tzgc.onrender.com/razorpay/webhook`
 Subscribe to the `payment.captured` event and use the same webhook secret in Render. Test with Razorpay Test Mode first. Do not accept real payments until checkout, signature verification, webhook retries, database persistence, and refunds/support procedures have been tested.
 
 The app verifies checkout signatures server-side and checks that the payment is captured before activating a plan. The daily limit is per authenticated user and uses the server's calendar date. Premium features require a working persistent PostgreSQL database; do not rely on ephemeral SQLite storage in production.
+
+
+## What changed in this version
+- **Claude behind the mentor** (`claude_mentor.py`): grounded in the offline parser, structured replies, prompt-injection hygiene, free/premium model routing.
+- **Follow-up chat** (`/api/mentor/chat`): ask "explain line by line", "give me a practice problem", etc. History stays in the browser.
+- **Fair usage**: if the AI service fails, the learner's free request is refunded automatically.
+- **Better premium story**: honest Free vs Premium comparison, clear "pay once for 30 days, no auto-renewal", upgrade card when the daily limit is reached, and a dashboard with plan status and usage.
+- **Stronger CSRF**: mentor, chat, resume, theme and community POST routes now require the CSRF token.
+- **Legal pages**: `/terms`, `/privacy`, `/refund` are templates. Fill in the [brackets] and have them reviewed before taking real payments.
+- If you mention that the mentor is powered by Claude, follow Anthropic's brand guidelines and do not imply endorsement or affiliation.
