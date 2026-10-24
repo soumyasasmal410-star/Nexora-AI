@@ -1,16 +1,156 @@
-const year=document.getElementById("year");if(year)year.textContent=new Date().getFullYear();
-const form=document.getElementById("mentorForm"),submitBtn=document.getElementById("submitBtn"),result=document.getElementById("result");
-function makeList(items){return '<ul>'+items.map(item=>'<li>'+escapeHtml(item)+'</li>').join('')+'</ul>'}
-function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
-if(form){form.addEventListener("submit",async event=>{event.preventDefault();const code=document.getElementById("code").value,question=document.getElementById("question").value,mode=document.getElementById("mode").value;if(!code.trim()){document.getElementById("code").focus();return}
-submitBtn.disabled=true;submitBtn.innerHTML='Analyzing… <span>◌</span>';result.innerHTML='<div class="result-placeholder"><span>✳</span><b>Checking your code…</b><p>Looking for Python syntax issues and useful next steps.</p></div>';
-try{const response=await fetch("/api/mentor",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,question,mode})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Something went wrong.");
-const diagnostics=(data.diagnostics||[]).length?'<h5>Smart error finder</h5>'+makeList(data.diagnostics):'';
-const examples=(data.examples||[]).map(example=>'<div class="example-card"><b>'+escapeHtml(example.title||"Example")+'</b><pre>'+escapeHtml(example.code||"")+'</pre><p><strong>Expected result:</strong></p><pre>'+escapeHtml(example.result||"")+'</pre><p>'+escapeHtml(example.explanation||"")+'</p></div>').join('');
-result.innerHTML='<div class="result-content"><h4>'+escapeHtml(data.headline||"Your guidance")+'</h4><h5>Syntax check</h5><p>'+escapeHtml(data.syntax||"No syntax details available.")+'</p>'+diagnostics+'<h5>Hints to consider</h5>'+makeList(data.hints||[])+'<h5>Example-based explanation</h5>'+(examples||'<p>Try a small example to see a related concept.</p>')+'<h5>What to try next</h5>'+makeList(data.next_steps||[])+'<div class="notice">'+escapeHtml(data.message||"Review these suggestions and test your code.")+'</div></div>';
-}catch(error){result.innerHTML='<div class="result-content"><h4>Could not analyze</h4><p>'+escapeHtml(error.message)+'</p><p>Check your connection and try again.</p></div>'}
-finally{submitBtn.disabled=false;submitBtn.innerHTML='Analyze code <span>→</span>'}
-})}
+const year = document.getElementById("year");
+if (year) year.textContent = new Date().getFullYear();
+
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+const aiOn = document.body.dataset.ai === "on";
+const form = document.getElementById("mentorForm");
+const submitBtn = document.getElementById("submitBtn");
+const result = document.getElementById("result");
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
+}
+function makeList(items) {
+  return '<ul>' + items.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>';
+}
+function codeBlock(code) {
+  return '<div class="code-wrap"><button type="button" class="copy-btn" aria-label="Copy code">Copy</button><pre>' + escapeHtml(code) + '</pre></div>';
+}
+/* Chat text -> safe HTML: everything is escaped first, then only code fences, `code`, **bold** and line breaks are added. */
+function formatReply(text) {
+  return String(text).split("```").map((part, i) => {
+    if (i % 2 === 1) return codeBlock(part.replace(/^[a-zA-Z0-9_+-]*\n/, "").trim());
+    return escapeHtml(part.trim())
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .split(/\n{2,}/).filter(p => p.trim()).map(p => '<p>' + p.replace(/\n/g, '<br>') + '</p>').join('');
+  }).join('');
+}
+function upgradeCard(message) {
+  return '<div class="result-content upgrade-card"><h4>You have used today\'s free AI requests</h4><p>' + escapeHtml(message) +
+    '</p><a class="btn primary" href="#premium">See Premium <span>→</span></a><p class="muted-small">Offline syntax checks and Python practice are still free. Your free requests reset tomorrow.</p></div>';
+}
+function loginCard(message) {
+  return '<div class="result-content upgrade-card"><h4>Log in to use the AI Mentor</h4><p>' + escapeHtml(message) +
+    '</p><a class="btn primary" href="/login">Log in <span>→</span></a> <a class="btn ghost" href="/signup">Create free account</a></div>';
+}
+
+document.addEventListener("click", event => {
+  const btn = event.target.closest(".copy-btn");
+  if (!btn) return;
+  const pre = btn.parentElement.querySelector("pre");
+  navigator.clipboard?.writeText(pre ? pre.textContent : "").then(() => {
+    btn.textContent = "Copied";
+    setTimeout(() => { btn.textContent = "Copy"; }, 1400);
+  }).catch(() => { btn.textContent = "Press Ctrl+C"; });
+});
+
+/* ---------- Code Mentor ---------- */
+let lastCode = "", lastMode = "hint", chatHistory = [];
+const chatBox = document.getElementById("chatBox");
+const chatLog = document.getElementById("chatLog");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+const chatSend = document.getElementById("chatSend");
+const chatNote = document.getElementById("chatNote");
+
+function remainingNote(remaining) {
+  if (remaining === null || remaining === undefined) return "Premium: unlimited requests.";
+  if (remaining <= 3) return remaining + " free AI request" + (remaining === 1 ? "" : "s") + " left today. <a href=\"#premium\">Go unlimited</a>";
+  return remaining + " free AI requests left today.";
+}
+
+if (form) {
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const code = document.getElementById("code").value;
+    const question = document.getElementById("question").value;
+    const mode = document.getElementById("mode").value;
+    if (!code.trim()) { document.getElementById("code").focus(); return; }
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = 'Analyzing… <span>◌</span>';
+    result.innerHTML = '<div class="result-placeholder"><span>✳</span><b>' + (aiOn ? 'Claude is reading your code…' : 'Checking your code…') +
+      '</b><p>Looking for Python syntax issues and useful next steps.</p></div>';
+    try {
+      const response = await fetch("/api/mentor", {
+        method: "POST", credentials: "same-origin",
+        headers: {"Content-Type": "application/json", "X-CSRF-Token": csrfToken},
+        body: JSON.stringify({code, question, mode})
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 429 && data.limit_reached) { result.innerHTML = upgradeCard(data.error || "Free limit reached."); return; }
+      if (response.status === 401 && data.login_required) { result.innerHTML = loginCard(data.error || "Please log in."); return; }
+      if (!response.ok) throw new Error(data.error || "Something went wrong.");
+
+      const diagnostics = (data.diagnostics || []).length ? '<h5>Smart error finder</h5>' + makeList(data.diagnostics) : '';
+      const examples = (data.examples || []).map(example =>
+        '<div class="example-card"><b>' + escapeHtml(example.title || "Example") + '</b>' + codeBlock(example.code || "") +
+        '<p><strong>Expected result:</strong></p><pre>' + escapeHtml(example.result || "") + '</pre><p>' + escapeHtml(example.explanation || "") + '</p></div>').join('');
+      const badge = data.ai_enabled ? '<span class="ai-badge">Claude' + (data.ai_tier === "premium" ? " · deep review" : "") + '</span>' : '';
+      const quota = data.ai_enabled ? '<p class="quota-note">' + remainingNote(data.premium ? null : data.remaining_today) + '</p>' : '';
+      result.innerHTML = '<div class="result-content"><h4>' + escapeHtml(data.headline || "Your guidance") + badge + '</h4>' +
+        '<h5>Syntax check</h5><p>' + escapeHtml(data.syntax || "No syntax details available.") + '</p>' + diagnostics +
+        '<h5>Hints to consider</h5>' + makeList(data.hints || []) +
+        '<h5>Example-based explanation</h5>' + (examples || '<p>Try a small example to see a related concept.</p>') +
+        '<h5>What to try next</h5>' + makeList(data.next_steps || []) +
+        '<div class="notice">' + escapeHtml(data.message || "Review these suggestions and test your code.") + '</div>' + quota + '</div>';
+
+      lastCode = code; lastMode = mode; chatHistory = [];
+      if (chatBox) {
+        chatBox.hidden = !data.ai_enabled;
+        chatLog.innerHTML = ""; chatNote.innerHTML = "";
+      }
+    } catch (error) {
+      result.innerHTML = '<div class="result-content"><h4>Could not analyze</h4><p>' + escapeHtml(error.message) + '</p><p>Check your connection and try again.</p></div>';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Analyze code <span>→</span>';
+    }
+  });
+}
+
+/* ---------- Follow-up chat (history lives only in this page) ---------- */
+function addBubble(role, html) {
+  const div = document.createElement("div");
+  div.className = "bubble " + role;
+  div.innerHTML = html;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
+}
+async function sendChat(message) {
+  if (!message.trim() || !lastCode) return;
+  chatInput.value = ""; chatSend.disabled = true; chatInput.disabled = true;
+  addBubble("user", '<p>' + escapeHtml(message) + '</p>');
+  const thinking = addBubble("assistant", '<p class="thinking">Thinking…</p>');
+  try {
+    const response = await fetch("/api/mentor/chat", {
+      method: "POST", credentials: "same-origin",
+      headers: {"Content-Type": "application/json", "X-CSRF-Token": csrfToken},
+      body: JSON.stringify({code: lastCode, mode: lastMode, history: chatHistory, message})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 429 && data.limit_reached) { thinking.innerHTML = upgradeCard(data.error || "Free limit reached."); return; }
+    if (response.status === 401 && data.login_required) { thinking.innerHTML = loginCard(data.error || "Please log in."); return; }
+    if (!response.ok) throw new Error(data.error || "Could not get an answer.");
+    thinking.innerHTML = formatReply(data.reply);
+    chatHistory.push({role: "user", content: message}, {role: "assistant", content: data.reply});
+    chatHistory = chatHistory.slice(-10);
+    chatNote.innerHTML = remainingNote(data.premium ? null : data.remaining_today);
+  } catch (error) {
+    thinking.innerHTML = '<p class="chat-error">' + escapeHtml(error.message) + '</p>';
+  } finally {
+    chatSend.disabled = false; chatInput.disabled = false; chatInput.focus();
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+}
+if (chatForm) {
+  chatForm.addEventListener("submit", event => { event.preventDefault(); sendChat(chatInput.value); });
+  document.getElementById("chatChips").addEventListener("click", event => {
+    const chip = event.target.closest("button[data-q]");
+    if (chip) sendChat(chip.dataset.q);
+  });
+}
 
 const practiceData = {
   output: {
