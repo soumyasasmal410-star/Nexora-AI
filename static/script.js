@@ -69,7 +69,7 @@ if (form) {
     if (!code.trim()) { document.getElementById("code").focus(); return; }
     submitBtn.disabled = true;
     submitBtn.innerHTML = 'Analyzing… <span>◌</span>';
-    result.innerHTML = '<div class="result-placeholder"><span>✳</span><b>' + (aiOn ? 'Claude is reading your code…' : 'Checking your code…') +
+    result.innerHTML = '<div class="result-placeholder"><span>✳</span><b>' + (aiOn ? 'Reading your code…' : 'Checking your code…') +
       '</b><p>Looking for Python syntax issues and useful next steps.</p></div>';
     try {
       const response = await fetch("/api/mentor", {
@@ -86,7 +86,7 @@ if (form) {
       const examples = (data.examples || []).map(example =>
         '<div class="example-card"><b>' + escapeHtml(example.title || "Example") + '</b>' + codeBlock(example.code || "") +
         '<p><strong>Expected result:</strong></p><pre>' + escapeHtml(example.result || "") + '</pre><p>' + escapeHtml(example.explanation || "") + '</p></div>').join('');
-      const badge = data.ai_enabled ? '<span class="ai-badge">Claude' + (data.ai_tier === "premium" ? " · deep review" : "") + '</span>' : '';
+      const badge = data.ai_enabled ? '<span class="ai-badge">' + escapeHtml(data.ai_name || "AI") + (data.ai_tier === "premium" ? " · deep review" : "") + '</span>' : '';
       const quota = data.ai_enabled ? '<p class="quota-note">' + remainingNote(data.premium ? null : data.remaining_today) + '</p>' : '';
       result.innerHTML = '<div class="result-content"><h4>' + escapeHtml(data.headline || "Your guidance") + badge + '</h4>' +
         '<h5>Syntax check</h5><p>' + escapeHtml(data.syntax || "No syntax details available.") + '</p>' + diagnostics +
