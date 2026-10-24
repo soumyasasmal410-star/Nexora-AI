@@ -124,10 +124,18 @@ def analyze_locally(code: str, question: str, mode: str) -> dict:
         ast.parse(code, filename="<submitted-code>", mode="exec")
         syntax_note = "Python syntax check passed. This does not guarantee the program will run correctly."
     except SyntaxError as exc:
-        syntax_note = (
-            f"Syntax error on line {exc.lineno or '?'}: {exc.msg}. "
-            "Check this line and the line above for missing colons, brackets, quotes, or indentation."
-        )
+        if exc.msg == "unexpected indent" and (exc.lineno or 0) <= 2:
+            syntax_note = (
+                f"Your pasted code starts with unexpected indentation on line {exc.lineno or 1}. "
+                "This often happens when only the middle/end of a function was copied. "
+                "Paste the complete Python code from its first line, and keep indentation only inside functions, classes, loops, and conditions."
+            )
+            hints.append("The snippet appears to start partway through a statement or indented block. Include the missing lines above it; removing spaces alone may not fix incomplete code.")
+        else:
+            syntax_note = (
+                f"Syntax error on line {exc.lineno or '?'}: {exc.msg}. "
+                "Check this line and the line above for missing colons, brackets, quotes, or indentation."
+            )
         if exc.text:
             hints.append(f"Problem line: {exc.text.strip()}")
 
