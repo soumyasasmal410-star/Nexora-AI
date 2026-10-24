@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import json
+import math
 import os
 from datetime import date, datetime, timedelta
 from functools import wraps
@@ -125,6 +126,39 @@ def check_and_count_usage(user):
         return False, "Usage tracking is temporarily unavailable. Please try again shortly."
 
 
+def refund_usage(user):
+    """Give back one free request when the AI failed, so a service error never costs the learner a request."""
+    if is_premium(user):
+        return
+    try:
+        row = Usage.query.filter_by(user_id=user.id, day=date.today()).with_for_update().first()
+        if row and row.count > 0:
+            row.count -= 1
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not refund AI Mentor usage")
+
+
+def plan_overview(user):
+    """Everything the UI needs to show a learner's plan. Safe to call for logged-in users only."""
+    now = datetime.utcnow()
+    plan = Plan.query.filter_by(user_id=user.id).first()
+    active = bool(plan and plan.expires_at and plan.expires_at > now)
+    row = Usage.query.filter_by(user_id=user.id, day=date.today()).first()
+    used = row.count if row else 0
+    return {
+        "premium": active,
+        "expires_on": plan.expires_at.strftime("%d %b %Y") if active else None,
+        "days_left": max(1, math.ceil((plan.expires_at - now).total_seconds() / 86400)) if active else 0,
+        "used_today": used,
+        "remaining_today": None if active else max(0, FREE_DAILY_LIMIT - used),
+        "daily_limit": FREE_DAILY_LIMIT,
+        "price_inr": PREMIUM_PRICE_INR,
+        "premium_days": PREMIUM_DAYS,
+    }
+
+
 def _count(feature, limit):
     if is_premium(current_user):
         return True
@@ -163,10 +197,7 @@ def _activate(user_id):
 @premium_bp.get("/premium/status")
 @login_required
 def status():
-    row = Usage.query.filter_by(user_id=current_user.id, day=date.today()).first()
-    return jsonify(premium=is_premium(current_user), used_today=row.count if row else 0,
-                   daily_limit=FREE_DAILY_LIMIT, price_inr=PREMIUM_PRICE_INR,
-                   premium_days=PREMIUM_DAYS)
+    return jsonify(plan_overview(current_user))
 
 
 @premium_bp.post("/premium/create-order")
