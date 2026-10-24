@@ -8,3 +8,18 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENABLE_AI_MENTOR
+        value: "true"
+      # Secrets: paste these in the Render dashboard (they are never stored in Git).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
