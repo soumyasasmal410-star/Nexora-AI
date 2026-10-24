@@ -13,7 +13,7 @@ services:
       - key: ENABLE_AI_MENTOR
         value: "true"
       # Secrets: paste these in the Render dashboard (they are never stored in Git).
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: DATABASE_URL
         sync: false
