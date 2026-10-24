@@ -1,18 +1,22 @@
 """
-claude_mentor.py - the brain of Nexora AI's Python Mentor, powered by Claude (Anthropic API).
+ai_mentor.py - the brain of Nexora AI's Python Mentor. Works with Google Gemini OR Anthropic Claude.
 
-Two features:
-  analyze_with_claude()  - one-shot code review (hint / debug / explain / improve), structured output
-  chat_with_claude()     - follow-up chat about the same code (conversation kept in the browser, never stored)
+  analyze_with_ai()  - one-shot code review (hint / debug / explain / improve), structured output
+  chat_with_ai()     - follow-up chat about the same code (history stays in the browser, never stored)
 
-Model routing: free users -> fast model, Premium -> most capable model of the pair (see env vars below).
-The submitted code is only ever READ as text. It is never executed and never saved.
-
-Render env vars:
-  ANTHROPIC_API_KEY        (secret, from console.anthropic.com)
+Which provider? Set ONE key in Render (never in Git, never in chat):
+  GEMINI_API_KEY      -> Google Gemini  (default models below)
+  ANTHROPIC_API_KEY   -> Anthropic Claude
+  AI_PROVIDER=gemini|claude   (optional; only needed if both keys exist)
   ENABLE_AI_MENTOR=true
-  ANTHROPIC_MODEL_FREE=claude-haiku-5-5        (optional, default shown)
-  ANTHROPIC_MODEL_PREMIUM=claude-sonnet-5-5    (optional, default shown)
+
+Models (change them in Render if Google/Anthropic rename them - check the model list in AI Studio / the Anthropic console):
+  GEMINI_MODEL_FREE=gemini-2.5-flash   GEMINI_MODEL_PREMIUM=gemini-2.5-pro
+  ANTHROPIC_MODEL_FREE=claude-haiku-5-5   ANTHROPIC_MODEL_PREMIUM=claude-sonnet-5-5
+
+Free learners get the fast model, Premium learners get the stronger one. If the stronger model is unavailable
+(quota, access), the request quietly falls back to the fast model instead of failing.
+The submitted code is only ever READ as text. It is never executed and never saved by Nexora AI.
 """
 import json
 import logging
@@ -20,11 +24,15 @@ import os
 
 log = logging.getLogger("nexora.mentor")
 
-MODEL_FREE = os.getenv("ANTHROPIC_MODEL_FREE", "claude-haiku-5-5")
-MODEL_PREMIUM = os.getenv("ANTHROPIC_MODEL_PREMIUM", "claude-sonnet-5-5")
+GEMINI_FREE = os.getenv("GEMINI_MODEL_FREE", "gemini-2.5-flash")
+GEMINI_PREMIUM = os.getenv("GEMINI_MODEL_PREMIUM", "gemini-2.5-pro")
+CLAUDE_FREE = os.getenv("ANTHROPIC_MODEL_FREE", "claude-haiku-5-5")
+CLAUDE_PREMIUM = os.getenv("ANTHROPIC_MODEL_PREMIUM", "claude-sonnet-5-5")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 PERSONA = """You are Nexora AI's Python mentor: a patient, accurate teacher for students and beginner developers, \
-many of them in India. You understand English, Hindi and Hinglish.
+many of them in India. You understand English, Hindi and Hinglish. If asked who you are, say you are Nexora AI's Python \
+mentor, an AI assistant (never claim to be human).
 
 How you teach
 - Help the learner understand, not just get an answer. Explain the WHY in plain words, with short sentences.
@@ -50,7 +58,11 @@ Language
 - Reply in the same language and script the learner used (English, Hindi, or Hinglish). If unsure, use simple English. \
 Keep code, identifiers and error messages in English."""
 
-SYSTEM_REVIEW = PERSONA + "\n\nAlways answer by calling the mentor_reply tool."
+SYSTEM_REVIEW = PERSONA + """
+
+Output
+- Reply with the structured fields only: headline (<= 80 chars), explanation (2-5 short sentences), hints (2-5), \
+fixed_code (or empty), fix_notes (or empty), concept (one concept to study next), next_steps (2-4)."""
 
 SYSTEM_CHAT = PERSONA + """
 
@@ -67,51 +79,78 @@ MODE_GUIDANCE = {
     "improve": "Suggest ranked, safe improvements. Provide fixed_code only if you can show an improved version clearly.",
 }
 
-TOOL = {
-    "name": "mentor_reply",
-    "description": "The mentor's structured reply shown to the learner.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "headline": {"type": "string", "description": "One-line summary, at most 80 characters."},
-            "explanation": {"type": "string", "description": "The core diagnosis or explanation in 2-5 short sentences."},
-            "hints": {"type": "array", "items": {"type": "string"}, "description": "2-5 short, specific hints."},
-            "fixed_code": {"type": "string", "description": "Corrected or improved code, or an empty string."},
-            "fix_notes": {"type": "string", "description": "One or two sentences on what changed and why, or empty."},
-            "concept": {"type": "string", "description": "One concept the learner should study next."},
-            "next_steps": {"type": "array", "items": {"type": "string"}, "description": "2-4 concrete next steps."},
-        },
-        "required": ["headline", "explanation", "hints", "next_steps"],
+REPLY_SCHEMA = {   # JSON-schema style; converted for each provider
+    "type": "object",
+    "properties": {
+        "headline": {"type": "string"},
+        "explanation": {"type": "string"},
+        "hints": {"type": "array", "items": {"type": "string"}},
+        "fixed_code": {"type": "string"},
+        "fix_notes": {"type": "string"},
+        "concept": {"type": "string"},
+        "next_steps": {"type": "array", "items": {"type": "string"}},
     },
+    "required": ["headline", "explanation", "hints", "next_steps"],
 }
+CLAUDE_TOOL = {"name": "mentor_reply", "description": "The mentor's structured reply shown to the learner.",
+               "input_schema": REPLY_SCHEMA}
 
-_client = None  # created lazily; tests replace it
+_claude_client = None   # created lazily; tests replace it
+
+
+class AIServiceError(Exception):
+    """A provider answered with an error. kind: auth | rate | model | forbidden | bad | server."""
+    def __init__(self, status, kind):
+        super().__init__(f"{kind} ({status})")
+        self.status, self.kind = status, kind
+
+
+# ---------------------------------------------------------------- provider selection
+def provider():
+    choice = os.getenv("AI_PROVIDER", "").strip().lower()
+    if choice in ("gemini", "claude"):
+        return choice
+    if os.getenv("GEMINI_API_KEY"):
+        return "gemini"
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return "claude"
+    return ""
 
 
 def ai_configured():
-    return os.getenv("ENABLE_AI_MENTOR", "false").lower() == "true" and bool(os.getenv("ANTHROPIC_API_KEY"))
+    p = provider()
+    key = {"gemini": "GEMINI_API_KEY", "claude": "ANTHROPIC_API_KEY"}.get(p)
+    return os.getenv("ENABLE_AI_MENTOR", "false").lower() == "true" and bool(key and os.getenv(key))
 
 
-def _get_client():
-    global _client
-    if _client is None:
-        import anthropic  # lazy: the site still starts if the package is missing
-        _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), timeout=25.0, max_retries=1)
-    return _client
+def ai_name():
+    return {"gemini": "Gemini", "claude": "Claude"}.get(provider(), "AI")
+
+
+def ai_company():
+    return {"gemini": "Google", "claude": "Anthropic"}.get(provider(), "the AI provider")
+
+
+def models(premium):
+    """Models to try, best first."""
+    free, pro = (GEMINI_FREE, GEMINI_PREMIUM) if provider() == "gemini" else (CLAUDE_FREE, CLAUDE_PREMIUM)
+    return [pro, free] if premium and pro != free else [free]
 
 
 def friendly_error(exc):
-    """(message, http_status) that is safe to show a learner. Never includes code or secrets."""
+    """(message, http_status) that is safe to show a learner. Never includes code, keys or provider details."""
+    kind = getattr(exc, "kind", "")
     name = exc.__class__.__name__
-    if name == "AuthenticationError":
+    if kind == "auth" or name == "AuthenticationError":
         return "The AI key is not valid. The site owner needs to check it.", 503
-    if name == "RateLimitError":
+    if kind == "rate" or name == "RateLimitError":
         return "The AI service is busy right now. Please try again in a minute.", 503
-    if name in ("APITimeoutError", "APIConnectionError", "TimeoutError"):
+    if name in ("APITimeoutError", "APIConnectionError", "TimeoutError", "Timeout", "ConnectionError"):
         return "The AI service took too long to answer. Please try again.", 503
     return "The AI service could not finish this request. Please try again.", 503
 
 
+# ---------------------------------------------------------------- text helpers
 def _clean(text, limit):
     """Stop user text from closing our XML-style tags (prompt-injection hygiene)."""
     text = str(text)[:limit]
@@ -131,33 +170,136 @@ def _build_user_message(code, question, mode, local_result):
     )
 
 
-def _extract(response):
-    """Pull the mentor_reply tool input out of the response; fall back to JSON text."""
+def _strs(value, n, limit):
+    return [str(v).strip()[:limit] for v in value if str(v).strip()][:n] if isinstance(value, list) else []
+
+
+def _parse_json_text(text):
+    text = (text or "").strip()
+    try:
+        return json.loads(text)
+    except ValueError:
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end > start:
+            return json.loads(text[start:end + 1])
+        raise ValueError("no JSON in the model response")
+
+
+# ---------------------------------------------------------------- Gemini (plain HTTPS, key in a header, never in the URL)
+def _gemini_schema(node):
+    t = {"object": "OBJECT", "string": "STRING", "array": "ARRAY"}[node["type"]]
+    out = {"type": t}
+    if "properties" in node:
+        out["properties"] = {k: _gemini_schema(v) for k, v in node["properties"].items()}
+    if "items" in node:
+        out["items"] = _gemini_schema(node["items"])
+    if "required" in node:
+        out["required"] = list(node["required"])
+    return out
+
+
+def _gemini_post(model, body):
+    import requests
+    resp = requests.post(GEMINI_URL.format(model=model), json=body, timeout=30,
+                         headers={"x-goog-api-key": os.getenv("GEMINI_API_KEY", ""), "Content-Type": "application/json"})
+    if resp.status_code != 200:
+        try:
+            msg = str(resp.json().get("error", {}).get("message", "")).lower()
+        except ValueError:
+            msg = ""
+        s = resp.status_code
+        kind = ("auth" if s == 401 or "api key" in msg else "forbidden" if s == 403 else "rate" if s == 429
+                else "model" if s == 404 else "bad" if s == 400 else "server")
+        raise AIServiceError(s, kind)
+    return resp.json()
+
+
+def _gemini_run(model, system, contents, max_tokens, schema=None):
+    cfg = {"maxOutputTokens": max_tokens}
+    if schema:
+        cfg.update(responseMimeType="application/json", responseSchema=_gemini_schema(schema))
+    if "flash" in model:
+        cfg["thinkingConfig"] = {"thinkingBudget": 0}     # fast + cheap for the free tier
+    body = {"systemInstruction": {"parts": [{"text": system}]}, "contents": contents, "generationConfig": cfg}
+    try:
+        data = _gemini_post(model, body)
+    except AIServiceError as exc:
+        if exc.kind != "bad" or "thinkingConfig" not in cfg:
+            raise
+        cfg.pop("thinkingConfig")                          # this model does not accept the option: retry once without
+        data = _gemini_post(model, body)
+    if (data.get("promptFeedback") or {}).get("blockReason"):
+        raise ValueError("blocked by the provider's safety filter")
+    cands = data.get("candidates") or []
+    if not cands:
+        raise ValueError("no candidates")
+    if schema and cands[0].get("finishReason") not in (None, "STOP"):
+        raise ValueError("incomplete structured reply")
+    text = "".join(p.get("text", "") for p in (cands[0].get("content") or {}).get("parts", []) if not p.get("thought"))
+    meta = data.get("usageMetadata") or {}
+    log.info("gemini ok model=%s in=%s out=%s", model, meta.get("promptTokenCount", "?"), meta.get("candidatesTokenCount", "?"))
+    return text
+
+
+# ---------------------------------------------------------------- Claude
+def _get_claude():
+    global _claude_client
+    if _claude_client is None:
+        import anthropic  # lazy: the site still starts if the package is missing
+        _claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), timeout=25.0, max_retries=1)
+    return _claude_client
+
+
+def _claude_structured(model, system, user, max_tokens):
+    def call(force):
+        kw = dict(model=model, max_tokens=max_tokens, system=system, tools=[CLAUDE_TOOL],
+                  messages=[{"role": "user", "content": user}],
+                  tool_choice={"type": "tool", "name": "mentor_reply"} if force else {"type": "auto"})
+        return _get_claude().messages.create(**kw)
+    try:
+        response = call(True)
+    except Exception as exc:                 # some model settings reject forced tool use: retry once with auto
+        if exc.__class__.__name__ not in ("BadRequestError", "UnprocessableEntityError"):
+            raise
+        response = call(False)
     for block in getattr(response, "content", []):
         if getattr(block, "type", "") == "tool_use" and getattr(block, "name", "") == "mentor_reply":
             return dict(block.input)
     for block in getattr(response, "content", []):
         if getattr(block, "type", "") == "text":
-            text = block.text.strip()
-            start, end = text.find("{"), text.rfind("}")
-            if start != -1 and end > start:
-                return json.loads(text[start:end + 1])
+            return _parse_json_text(block.text)
     raise ValueError("no structured reply in the model response")
 
 
-def _call(model, system, user, max_tokens, force):
-    kwargs = dict(model=model, max_tokens=max_tokens, system=system, tools=[TOOL],
-                  messages=[{"role": "user", "content": user}])
-    kwargs["tool_choice"] = {"type": "tool", "name": "mentor_reply"} if force else {"type": "auto"}
-    return _get_client().messages.create(**kwargs)
+def _claude_chat(model, system, messages, max_tokens):
+    response = _get_claude().messages.create(model=model, max_tokens=max_tokens, system=system, messages=messages)
+    return "".join(getattr(b, "text", "") for b in getattr(response, "content", []) if getattr(b, "type", "") == "text")
 
 
-def _strs(value, n, limit):
-    return [str(v).strip()[:limit] for v in value if str(v).strip()][:n] if isinstance(value, list) else []
+# ---------------------------------------------------------------- dispatch with model fallback
+def _try_models(premium, fn):
+    """Run fn(model) on the best model; if it is unavailable (quota/access/not found), fall back to the fast one."""
+    last = None
+    for model in models(premium):
+        try:
+            return fn(model)
+        except AIServiceError as exc:
+            last = exc
+            if exc.kind in ("rate", "model", "forbidden"):
+                log.warning("model %s unavailable (%s); trying the next one", model, exc.kind)
+                continue
+            raise
+        except Exception as exc:
+            if exc.__class__.__name__ in ("RateLimitError", "NotFoundError", "PermissionDeniedError") and model != models(premium)[-1]:
+                last = exc
+                continue
+            raise
+    raise last
 
 
-def analyze_with_claude(code, question, mode, local_result, premium=False):
-    """One-shot review. Same contract as the old analyze_with_ai(): returns local_result enriched with the AI's answer."""
+# ---------------------------------------------------------------- public API
+def analyze_with_ai(code, question, mode, local_result, premium=False):
+    """One-shot review. Returns local_result enriched with the AI's answer (or unchanged + a message on failure)."""
     if mode not in MODE_GUIDANCE:
         mode = "hint"
     if not ai_configured():
@@ -166,20 +308,17 @@ def analyze_with_claude(code, question, mode, local_result, premium=False):
         local_result["ai_enabled"] = False
         return local_result
 
-    model = MODEL_PREMIUM if premium else MODEL_FREE
     user = _build_user_message(code, question, mode, local_result)
-    max_tokens = 1500 if premium else 900
+    max_tokens = 3000 if premium else 1800
     try:
-        try:
-            response = _call(model, SYSTEM_REVIEW, user, max_tokens, force=True)
-        except Exception as exc:                       # some model settings reject forced tool use: retry once with auto
-            if exc.__class__.__name__ not in ("BadRequestError", "UnprocessableEntityError"):
-                raise
-            response = _call(model, SYSTEM_REVIEW, user, max_tokens, force=False)
-        reply = _extract(response)
-        usage = getattr(response, "usage", None)
-        if usage:   # token counts only, never the code
-            log.info("mentor ok model=%s in=%s out=%s", model, getattr(usage, "input_tokens", "?"), getattr(usage, "output_tokens", "?"))
+        if provider() == "gemini":
+            def run(model):
+                contents = [{"role": "user", "parts": [{"text": user}]}]
+                return _parse_json_text(_gemini_run(model, SYSTEM_REVIEW, contents, max_tokens, REPLY_SCHEMA))
+        else:
+            def run(model):
+                return _claude_structured(model, SYSTEM_REVIEW, user, 1500 if premium else 900)
+        reply = _try_models(premium, run)
 
         hints = _strs(reply.get("hints"), 5, 1200)
         explanation = str(reply.get("explanation") or "").strip()[:1500]
@@ -209,15 +348,14 @@ def analyze_with_claude(code, question, mode, local_result, premium=False):
             "ai_enabled": True,
             "offline": False,
             "ai_tier": "premium" if premium else "free",
-            "message": ("AI guidance by Claude is on. Your code is sent to the AI provider for this request only; "
-                        "Nexora AI does not save it. The code is read as text and never executed."),
+            "ai_name": ai_name(),
+            "message": (f"AI guidance by {ai_name()} is on. Your code is sent to {ai_company()}'s AI service for this "
+                        "request only; Nexora AI does not save it. The code is read as text and never executed."),
         })
         return local_result
     except Exception as exc:
-        log.warning("mentor failed: %s", exc.__class__.__name__)   # class name only: never log user code
+        log.warning("mentor failed: %s %s", exc.__class__.__name__, getattr(exc, "kind", ""))   # never log user code
         why, _status = friendly_error(exc)
-        if exc.__class__.__name__ == "ValueError":
-            why = "The AI service could not finish this request."
         local_result["message"] = f"{why} Showing the offline checks instead."
         local_result["ai_enabled"] = False
         return local_result
@@ -234,8 +372,7 @@ def _sanitize_history(history):
         role, content = item.get("role"), str(item.get("content", "")).strip()
         if role not in ("user", "assistant") or not content:
             continue
-        expected = "user" if len(turns) % 2 == 0 else "assistant"
-        if role != expected:
+        if role != ("user" if len(turns) % 2 == 0 else "assistant"):
             continue
         turns.append({"role": role, "content": _clean(content, 2000 if role == "user" else 4000)})
     if turns and turns[-1]["role"] == "user":
@@ -243,25 +380,25 @@ def _sanitize_history(history):
     return turns
 
 
-def chat_with_claude(code, history, message, syntax_note, premium=False, mode="hint"):
-    """Follow-up chat about the learner's code. Returns the assistant's reply text. Raises on API errors."""
+def chat_with_ai(code, history, message, syntax_note, premium=False, mode="hint"):
+    """Follow-up chat about the learner's code. Returns the reply text. Raises on provider errors."""
     if not ai_configured():
         raise RuntimeError("AI mentor is not configured")
-    model = MODEL_PREMIUM if premium else MODEL_FREE
     context = (f"<mode>{mode if mode in MODE_GUIDANCE else 'hint'}</mode>\n"
                f"<local_checks>syntax: {_clean(syntax_note, 500)}</local_checks>\n"
                f"<python_code>\n{_clean(code, 12000)}\n</python_code>\n"
                "The learner will now ask follow-up questions about this code.")
-    messages = [{"role": "user", "content": context},
-                {"role": "assistant", "content": "Got it - I have read the code. What would you like to know?"}]
-    messages += _sanitize_history(history)
-    messages.append({"role": "user", "content": _clean(message, 2000)})
-    response = _get_client().messages.create(model=model, max_tokens=1100 if premium else 700,
-                                             system=SYSTEM_CHAT, messages=messages)
-    text = "".join(getattr(b, "text", "") for b in getattr(response, "content", []) if getattr(b, "type", "") == "text").strip()
-    usage = getattr(response, "usage", None)
-    if usage:
-        log.info("chat ok model=%s in=%s out=%s", model, getattr(usage, "input_tokens", "?"), getattr(usage, "output_tokens", "?"))
+    ack = "Got it - I have read the code. What would you like to know?"
+    turns = _sanitize_history(history) + [{"role": "user", "content": _clean(message, 2000)}]
+
+    if provider() == "gemini":
+        contents = [{"role": "user", "parts": [{"text": context}]}, {"role": "model", "parts": [{"text": ack}]}]
+        contents += [{"role": "model" if t["role"] == "assistant" else "user", "parts": [{"text": t["content"]}]} for t in turns]
+        text = _try_models(premium, lambda m: _gemini_run(m, SYSTEM_CHAT, contents, 2500 if premium else 1500))
+    else:
+        msgs = [{"role": "user", "content": context}, {"role": "assistant", "content": ack}] + turns
+        text = _try_models(premium, lambda m: _claude_chat(m, SYSTEM_CHAT, msgs, 1100 if premium else 700))
+    text = (text or "").strip()
     if not text:
         raise ValueError("empty reply")
     return text[:6000]
