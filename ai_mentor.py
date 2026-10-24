@@ -282,7 +282,7 @@ def _try_models(premium, fn):
     last = None
     for model in models(premium):
         try:
-            return fn(model)
+            return fn(model), model
         except AIServiceError as exc:
             last = exc
             if exc.kind in ("rate", "model", "forbidden"):
@@ -318,7 +318,8 @@ def analyze_with_ai(code, question, mode, local_result, premium=False):
         else:
             def run(model):
                 return _claude_structured(model, SYSTEM_REVIEW, user, 1500 if premium else 900)
-        reply = _try_models(premium, run)
+        reply, used_model = _try_models(premium, run)
+        deep = premium and used_model == models(True)[0]     # badge only when the stronger model really answered
 
         hints = _strs(reply.get("hints"), 5, 1200)
         explanation = str(reply.get("explanation") or "").strip()[:1500]
@@ -347,7 +348,7 @@ def analyze_with_ai(code, question, mode, local_result, premium=False):
             "examples": examples[:4],
             "ai_enabled": True,
             "offline": False,
-            "ai_tier": "premium" if premium else "free",
+            "ai_tier": "premium" if deep else "free",
             "ai_name": ai_name(),
             "message": (f"AI guidance by {ai_name()} is on. Your code is sent to {ai_company()}'s AI service for this "
                         "request only; Nexora AI does not save it. The code is read as text and never executed."),
@@ -394,10 +395,10 @@ def chat_with_ai(code, history, message, syntax_note, premium=False, mode="hint"
     if provider() == "gemini":
         contents = [{"role": "user", "parts": [{"text": context}]}, {"role": "model", "parts": [{"text": ack}]}]
         contents += [{"role": "model" if t["role"] == "assistant" else "user", "parts": [{"text": t["content"]}]} for t in turns]
-        text = _try_models(premium, lambda m: _gemini_run(m, SYSTEM_CHAT, contents, 2500 if premium else 1500))
+        text, _m = _try_models(premium, lambda m: _gemini_run(m, SYSTEM_CHAT, contents, 2500 if premium else 1500))
     else:
         msgs = [{"role": "user", "content": context}, {"role": "assistant", "content": ack}] + turns
-        text = _try_models(premium, lambda m: _claude_chat(m, SYSTEM_CHAT, msgs, 1100 if premium else 700))
+        text, _m = _try_models(premium, lambda m: _claude_chat(m, SYSTEM_CHAT, msgs, 1100 if premium else 700))
     text = (text or "").strip()
     if not text:
         raise ValueError("empty reply")
