@@ -45,70 +45,70 @@ document.addEventListener("click", event => {
   }).catch(() => { btn.textContent = "Press Ctrl+C"; });
 });
 
-/* ---------- Code Mentor ---------- */
-let lastCode = "", lastMode = "hint", chatHistory = [];
-const chatBox = document.getElementById("chatBox");
-const chatLog = document.getElementById("chatLog");
-const chatForm = document.getElementById("chatForm");
-const chatInput = document.getElementById("chatInput");
-const chatSend = document.getElementById("chatSend");
-const chatNote = document.getElementById("chatNote");
+/* ---------- Browser-based Python runner ---------- */
+const codeEditor = document.getElementById("code");
+const lineNums = document.getElementById("lineNums");
+let pyodidePromise = null;
 
-function remainingNote(remaining) {
-  if (remaining === null || remaining === undefined) return "Premium: unlimited requests.";
-  if (remaining <= 3) return remaining + " free AI request" + (remaining === 1 ? "" : "s") + " left today. <a href=\"#premium\">Go unlimited</a>";
-  return remaining + " free AI requests left today.";
+function syncLineNumbers() {
+  if (!codeEditor || !lineNums) return;
+  const count = Math.max(50, codeEditor.value.split("\n").length);
+  lineNums.innerHTML = Array.from({length: count}, (_, i) => String(i + 1)).join("<br>");
+  lineNums.scrollTop = codeEditor.scrollTop;
 }
-
+function showRunResult(kind, title, text) {
+  if (!result) return;
+  result.innerHTML = '<div class="run-result ' + kind + '"><div class="run-result-head"><strong>' +
+    escapeHtml(title) + '</strong><span>' + (kind === "run-error" ? "ERROR" : kind === "run-success" ? "SUCCESS" : "RUNNING") +
+    '</span></div><pre></pre></div>';
+  result.querySelector("pre").textContent = text || (kind === "run-success" ? "Program finished with no output." : "");
+}
+async function getPyodide() {
+  if (!window.loadPyodide) throw new Error("Python runtime could not load. Check your internet connection and refresh the page.");
+  if (!pyodidePromise) {
+    showRunResult("run-loading", "Preparing Python", "Loading the browser-based Python runtime for the first run…");
+    pyodidePromise = window.loadPyodide();
+  }
+  return pyodidePromise;
+}
+if (codeEditor) {
+  codeEditor.addEventListener("input", syncLineNumbers);
+  codeEditor.addEventListener("scroll", () => { if (lineNums) lineNums.scrollTop = codeEditor.scrollTop; });
+  syncLineNumbers();
+}
 if (form) {
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    const code = document.getElementById("code").value;
-    const question = document.getElementById("question").value;
-    const mode = document.getElementById("mode").value;
-    if (!code.trim()) { document.getElementById("code").focus(); return; }
+    const code = codeEditor.value;
+    if (!code.trim()) {
+      codeEditor.focus();
+      showRunResult("run-error", "Nothing to run", "Paste or type Python code in the editor first.");
+      return;
+    }
     submitBtn.disabled = true;
-    submitBtn.innerHTML = 'Analyzing… <span>◌</span>';
-    result.innerHTML = '<div class="result-placeholder"><span>✳</span><b>' + (aiOn ? 'Reading your code…' : 'Checking your code…') +
-      '</b><p>Looking for Python syntax issues and useful next steps.</p></div>';
+    submitBtn.innerHTML = 'Running… <span>◌</span>';
+    showRunResult("run-loading", "Running Python", "Your code is running in this browser tab. The first run may take a few seconds.");
+    let stdout = "", stderr = "";
     try {
-      const response = await fetch("/api/mentor", {
-        method: "POST", credentials: "same-origin",
-        headers: {"Content-Type": "application/json", "X-CSRF-Token": csrfToken},
-        body: JSON.stringify({code, question, mode})
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.status === 429 && data.limit_reached) { result.innerHTML = upgradeCard(data.error || "Free limit reached."); return; }
-      if (response.status === 401 && data.login_required) { result.innerHTML = loginCard(data.error || "Please log in."); return; }
-      if (!response.ok) throw new Error(data.error || "Something went wrong.");
-
-      const diagnostics = (data.diagnostics || []).length ? '<h5>Smart error finder</h5>' + makeList(data.diagnostics) : '';
-      const examples = (data.examples || []).map(example =>
-        '<div class="example-card"><b>' + escapeHtml(example.title || "Example") + '</b>' + codeBlock(example.code || "") +
-        '<p><strong>Expected result:</strong></p><pre>' + escapeHtml(example.result || "") + '</pre><p>' + escapeHtml(example.explanation || "") + '</p></div>').join('');
-      const badge = data.ai_enabled ? '<span class="ai-badge">' + escapeHtml(data.ai_name || "AI") + (data.ai_tier === "premium" ? " · deep review" : "") + '</span>' : '';
-      const quota = data.ai_enabled ? '<p class="quota-note">' + remainingNote(data.premium ? null : data.remaining_today) + '</p>' : '';
-      result.innerHTML = '<div class="result-content"><h4>' + escapeHtml(data.headline || "Your guidance") + badge + '</h4>' +
-        '<h5>Syntax check</h5><p>' + escapeHtml(data.syntax || "No syntax details available.") + '</p>' + diagnostics +
-        '<h5>Hints to consider</h5>' + makeList(data.hints || []) +
-        '<h5>Example-based explanation</h5>' + (examples || '<p>Try a small example to see a related concept.</p>') +
-        '<h5>What to try next</h5>' + makeList(data.next_steps || []) +
-        '<div class="notice">' + escapeHtml(data.message || "Review these suggestions and test your code.") + '</div>' + quota + '</div>';
-
-      lastCode = code; lastMode = mode; chatHistory = [];
-      if (chatBox) {
-        chatBox.hidden = !data.ai_enabled;
-        chatLog.innerHTML = ""; chatNote.innerHTML = "";
+      const pyodide = await getPyodide();
+      pyodide.setStdout({batched: text => { stdout += text + "\n"; }});
+      pyodide.setStderr({batched: text => { stderr += text + "\n"; }});
+      await pyodide.runPythonAsync(code);
+      if (stderr.trim()) {
+        showRunResult("run-error", "Program finished with errors", (stdout ? "OUTPUT:\n" + stdout : "") + "ERROR:\n" + stderr);
+      } else {
+        showRunResult("run-success", "Run completed", stdout.trimEnd());
       }
     } catch (error) {
-      result.innerHTML = '<div class="result-content"><h4>Could not analyze</h4><p>' + escapeHtml(error.message) + '</p><p>Check your connection and try again.</p></div>';
+      const message = String(error && error.message ? error.message : error);
+      const combined = (stdout ? "OUTPUT:\n" + stdout + "\n" : "") + message;
+      showRunResult("run-error", "Python error", combined);
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Analyze code <span>→</span>';
+      submitBtn.innerHTML = 'Run <span>▶</span>';
     }
   });
 }
-
 /* ---------- Follow-up chat (history lives only in this page) ---------- */
 function addBubble(role, html) {
   const div = document.createElement("div");
