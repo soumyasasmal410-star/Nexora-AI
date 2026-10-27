@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="theme-color" content="#080b16">
 <meta name="csrf-token" content="{{ csrf_token }}">
 <meta name="description" content="Nexora AI — coding assistance and smart digital tools for students, developers, and creators.">
@@ -53,17 +53,21 @@
 <section id="mentor" class="section mentor-section">
   <div class="section-heading"><div><div class="eyebrow">LET'S SOLVE IT TOGETHER</div><h2>Your coding sidekick.</h2></div><p>Paste Python code. Choose the kind of help you need. Get a syntax check and practical next steps.</p></div>
   <div class="mentor-shell">
-    <div class="mentor-sidebar"><div class="sidebar-label">WORKSPACE</div><div class="workspace-selected"><span>⌘</span> Python Mentor <i>●</i></div><div class="sidebar-note"><b>Run Python</b><p>Run standard Python code in your browser. Output and errors appear below the editor.</p></div><div class="privacy-note"><span>◈</span><span><b>Runs in your browser</b><small>Your code runs locally with Pyodide; it is not sent to the Nexora server to execute.</small></span></div></div>
+    <div class="mentor-sidebar"><div class="sidebar-label">WORKSPACE</div><div class="workspace-selected"><span>⌘</span> Python Mentor <i>●</i></div><div class="sidebar-note"><b>Learning mode</b><p>Hints first, answers with understanding. The tool does not execute submitted code.</p></div><div class="privacy-note"><span>◈</span><span><b>Not stored by Nexora AI</b><small>{% if ai_enabled %}Code is sent to {{ ai_name }} ({{ ai_company }}) for this request only; this app does not save it.{% else %}Code is checked locally until the AI mentor is switched on.{% endif %}</small></span></div></div>
     <div class="mentor-main">
-      <div class="mentor-title"><div class="tool-icon purple small-icon">⌘</div><div><h3>Python Code Runner</h3><p>Write code, run it, and inspect output or errors instantly.</p></div><span class="offline-badge"><i></i> Browser runtime</span></div>
+      <div class="mentor-title"><div class="tool-icon purple small-icon">⌘</div><div><h3>Python Code Mentor</h3><p>What are you working through today?</p></div><span class="offline-badge"><i></i> {% if ai_enabled %}{{ ai_name }} AI on{% else %}Starter mode{% endif %}</span></div>
       <form id="mentorForm">
-        <div class="editor-top"><label for="code">Your Python code</label><span>PYTHON 3 · BROWSER RUNNER</span></div>
-        <div class="editor-wrap"><div class="line-nums" id="lineNums" aria-hidden="true">1</div><textarea id="code" maxlength="12000" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="def greet(name):&#10;    print('Hello, ' + name)&#10;&#10;greet('world')" required></textarea></div>
-        <div class="form-bottom"><span>↳ Standard Python code runs in your browser. Errors and printed output appear below. GUI libraries such as pygame are not supported in this console runner.</span><button class="btn primary" type="submit" id="submitBtn">Run <span>▶</span></button></div>
+        <label for="question">What do you need help with? <span>Optional</span></label>
+        <input id="question" maxlength="2000" placeholder="e.g. Why does this loop skip the last item?">
+        <div class="editor-top"><label for="code">Your Python code</label><span>PYTHON 3 · SYNTAX CHECK</span></div>
+        <div class="editor-wrap"><div class="line-nums">1<br>2<br>3<br>4<br>5</div><textarea id="code" spellcheck="false" placeholder="def greet(name):&#10;    print('Hello, ' + name)&#10;&#10;greet('world')" required></textarea></div>
+        <p id="codeCount" class="code-count" aria-live="polite"></p>
+        <div class="mode-row"><label for="mode">Help mode</label><select id="mode"><option value="hint">Give me hints</option><option value="debug">Debug my code</option><option value="explain">Explain the code</option><option value="improve">Suggest improvements</option></select></div>
+        <div class="form-bottom"><span>↳ {% if ai_enabled %}{{ ai_name }}-powered review plus a local syntax check. Log in to use it - 10 free requests a day.{% else %}Local syntax check and rule-based hints.{% endif %}</span><button class="btn primary" type="submit" id="submitBtn">Analyze code <span>→</span></button></div>
       </form>
       <div id="result" class="result-panel" aria-live="polite"><div class="result-placeholder"><span>✳</span><b>Your guidance will appear here</b><p>Submit a small Python snippet to get started.</p></div></div>
       <div id="chatBox" class="chat-box" hidden>
-        <div class="chat-head"><b>Ask a follow-up</b><span>Claude remembers this code. Nothing is saved.</span></div>
+        <div class="chat-head"><b>Ask a follow-up</b><span>The mentor remembers this code. Nothing is saved.</span></div>
         <div id="chatLog" class="chat-log" aria-live="polite"></div>
         <div class="chat-chips" id="chatChips">
           <button type="button" data-q="Explain this code line by line.">Explain line by line</button>
@@ -88,7 +92,7 @@
           <h4>Free <small>₹0</small></h4>
           <ul>
             <li>10 AI requests a day (reviews and follow-ups)</li>
-            <li>Fast Claude model with hints, fixes and explanations</li>
+            <li>Fast AI model with hints, fixes and explanations</li>
             <li>Offline checker, Python practice, 3D code viewer</li>
             <li>Resume preview and intro 3D tour</li>
           </ul>
@@ -97,7 +101,7 @@
           <h4>Premium <small>₹199 / 30 days</small></h4>
           <ul>
             <li><b>Unlimited</b> AI requests and follow-ups</li>
-            <li><b>Claude's most capable model</b> - deeper reviews, longer answers</li>
+            <li><b>Our most capable AI model</b> - deeper reviews, longer answers</li>
             <li>Resume PDF download and saving</li>
             <li>Full tutorials, theme CSS export, project gallery</li>
             <li>Community and page-view analytics</li>
@@ -147,11 +151,10 @@ print(number)</pre>
     </div>
   </div>
 </section>
-<section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI helps learners review Python code with instant syntax checks and Claude-powered explanations, hints and follow-up chat. This app never executes submitted code and does not save it.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
+<section id="about" class="closing"><div class="eyebrow">A WORK IN PROGRESS, BUILT WITH PURPOSE</div><h2>Make progress<br><span>one problem at a time.</span></h2><p>Nexora AI helps learners review Python code with instant syntax checks and AI-powered explanations, hints and follow-up chat. This app never executes submitted code and does not save it.</p><a class="btn ghost" href="#mentor">Try the mentor ↑</a></section>
 </main>
-<footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.{% if ai_enabled %} · AI by Claude{% endif %}</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · © <span id="year"></span> Nexora AI</span></footer>
+<footer><a class="brand" href="/"><span class="brand-mark">N</span><span>Nexora <b>AI</b></span></a><span>Build smarter. Learn faster.{% if ai_enabled %} · AI by {{ ai_name }}{% endif %}</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/refund">Refunds</a> · © <span id="year"></span> Nexora AI</span></footer>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 <script src="{{ url_for('static', filename='fx.js') }}" defer></script>
 <script src="{{ url_for('static', filename='nexora3d.js') }}" defer></script>
