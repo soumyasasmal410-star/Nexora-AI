@@ -335,30 +335,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .dash-tile.is-locked{opacity:.78}.dash-tile.is-locked em{color:#c9bdff}
 .dash-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#8d73ff20;color:#af9aff;border:1px solid #9c80ff38;font-size:16px}
 @media(max-width:900px){.dash-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:480px){.dash-grid{grid-template-columns:1fr}}
-/* ===== Python runner workspace refresh ===== */
-#mentor .mentor-sidebar .sidebar-note { display:block; }
-#mentor .mentor-main { padding:clamp(18px,2.5vw,32px); }
-#mentor .editor-top { margin-top:8px; }
-#mentor .editor-wrap { grid-template-columns:54px minmax(0,1fr); align-items:stretch; }
-#mentor .line-nums { height:1000px; overflow:hidden; padding:16px 12px; font:13px/20px 'DM Mono',monospace; white-space:pre; user-select:none; }
-#mentor .editor-wrap textarea { height:1000px; min-height:1000px; max-height:none; resize:vertical; overflow:auto; padding:16px; font:13px/20px 'DM Mono',monospace; tab-size:4; white-space:pre; }
-#mentor .mode-row { display:none!important; }
-#mentor .form-bottom { margin-top:16px; }
-#mentor .form-bottom>span { max-width:72%; font-size:11px; }
-#mentor .result-panel { margin-top:18px; }
-.run-result { border:1px solid #2b3855; border-radius:13px; overflow:hidden; background:#080d18; }
-.run-result-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 16px; background:#111a2d; border-bottom:1px solid #26324d; }
-.run-result-head strong { font-size:12px; }
-.run-result-head span { font:10px 'DM Mono',monospace; letter-spacing:1px; color:#8c9ab8; }
-.run-success .run-result-head span { color:#8ce7bc; }
-.run-error { border-color:#754052; }
-.run-error .run-result-head span { color:#ff8f9d; }
-.run-result pre { margin:0; min-height:72px; max-height:420px; overflow:auto; padding:16px; color:#cbd7ee; font:12px/1.75 'DM Mono',monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
-.run-error pre { color:#ffb4bd; }
-.run-loading pre { color:#8fdfe8; }
-@media(max-width:650px) {
-  #mentor .editor-wrap { grid-template-columns:36px minmax(0,1fr); }
-  #mentor .line-nums { padding:16px 7px; font-size:11px; }
-  #mentor .editor-wrap textarea { font-size:11px; padding:12px 9px; }
-  #mentor .form-bottom>span { max-width:none; }
-}
+
+
+/* ===== Mobile fix: nothing may widen the page (this made phones zoom out and show the desktop layout) ===== */
+html,body{overflow-x:clip}                      /* clip (not hidden) so the sticky header keeps working */
+.ambient{position:fixed}                        /* decorative blobs were sticking out past the right edge */
+img,canvas,svg,video{max-width:100%}
+pre{max-width:100%;overflow-x:auto}
+.tool-card,.mentor-shell,.mentor-main,.premium-panel,.plan-card,.chat-box{min-width:0}
+
+.code-count{margin:6px 2px 0;font:10px/1.7 'DM Mono',monospace;color:#7f8ba8}.code-count.is-warn{color:#ffd37a}.code-count.is-bad{color:#ff9bb0}
