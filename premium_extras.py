@@ -32,7 +32,7 @@ def init_extras(app, _db):
     Post, PageView = PostModel, PageViewModel
 
 
-BASE_CSS = """<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+BASE_CSS = """<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1">
 <style>body{background:#080b16;color:#e8ecff;font-family:Inter,Arial,sans-serif;padding:28px;max-width:900px;margin:auto}
 h1,h2{color:#00f5d4;text-shadow:0 0 10px #00f5d455} a{color:#7c5cff}
 .card{border:1px solid #7c5cff88;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 0 18px #7c5cff33}
