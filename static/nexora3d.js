@@ -25,8 +25,16 @@
     return parseFloat(cs.borderTopWidth) > 0 || cs.boxShadow !== 'none' || /rgba?\(\s*\d+,\s*\d+,\s*\d+(,\s*(0?\.\d*[1-9]|1))?\s*\)/.test(cs.backgroundColor) && cs.backgroundColor !== 'rgba(0, 0, 0, 0)'; };
 
   /* ---------- shared: spotlight glare + tilt on a box ---------- */
+  /* Only small cards may tilt. Big layout containers (main, sections, forms, anything with a big box) never do. */
+  function tiltable(el) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 640 || r.height > 460 || r.width < 120) return false;
+    if (/^(HTML|BODY|MAIN|SECTION|HEADER|FOOTER|NAV|FORM)$/.test(el.tagName)) return false;
+    return !el.querySelector('textarea,form,section,main,h1,h2');
+  }
+
   function makeTilt(el, max) {
-    if (!hover || still) return;
+    if (!hover || still || !tiltable(el)) return;
     const cs = getComputedStyle(el);
     if (cs.position === 'static') el.style.position = 'relative';
     if (cs.animationName !== 'none') return;                  // don't fight an existing CSS animation
@@ -38,6 +46,7 @@
     el.appendChild(glare);
     const prevShadow = el.style.boxShadow, prevTrans = el.style.transition;
     el.addEventListener('pointermove', e => {
+      if (!tiltable(el)) { el.style.transform = base; return; }          // layout changed and it became big: stop
       const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
       el.style.transition = 'transform .12s ease-out, box-shadow .25s';
       el.style.transform = base + ' perspective(1000px) rotateX(' + ((.5 - y) * max).toFixed(2) + 'deg) rotateY(' + ((x - .5) * max).toFixed(2) + 'deg) translateZ(0)';
@@ -51,6 +60,13 @@
     });
   }
 
+
+  /* safety net: if anything ever leaves a big layout container tilted, put it back */
+  const untiltBig = () => document.querySelectorAll('main,section,header,footer,body>div').forEach(el => {
+    if (/perspective|rotate/.test(el.style.transform || '')) { el.style.transform = ''; el.style.boxShadow = ''; }
+  });
+  untiltBig(); setInterval(untiltBig, 700);
+
   /* ---------- (1) hero: tilting glass code window + floating chips ---------- */
   safe(() => {
     const leaf = smallest(/main\.py/)[0]; if (!leaf) return;
@@ -60,7 +76,7 @@
       if (r.width >= 240 && r.height >= 110 && looksLikeBox(card)) break;
       card = card.parentElement;
     }
-    if (card.getBoundingClientRect().width > 760) return;      // went too far up: skip rather than break the hero
+    if (!tiltable(card)) return;                               // went too far up: skip rather than break the hero
     makeTilt(card, 9);
     const chips = smallest(/Ready to learn|AI-powered|Learn by doing/).map(el => {
       let c = el; while (c.parentElement && c.parentElement !== card.parentElement && !looksLikeBox(c)) c = c.parentElement; return c; });
@@ -96,12 +112,12 @@
     titles.forEach((h, idx) => {
       let card = h; const others = titles.filter(t => t !== h);
       while (card.parentElement && !others.some(o => card.parentElement.contains(o))) card = card.parentElement;
-      if (card === document.body || card.getBoundingClientRect().width > 700) return;
+      if (card === document.body || !tiltable(card)) return;
       makeTilt(card, 8);
       if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
       const cv = document.createElement('canvas'); cv.width = cv.height = 112;
       cv.setAttribute('aria-hidden', 'true');
-      cv.style.cssText = 'position:absolute;top:14px;right:14px;width:56px;height:56px;pointer-events:none;z-index:3;filter:drop-shadow(0 0 8px rgba(' + TEAL + ',.5))';
+      cv.style.cssText = 'position:absolute;bottom:12px;right:12px;width:52px;height:52px;pointer-events:none;z-index:3;filter:drop-shadow(0 0 8px rgba(' + TEAL + ',.5))';
       card.appendChild(cv);
       const o = {cv, ctx: cv.getContext('2d'), s: SHAPES[idx % SHAPES.length], a: idx * 1.3, vis: true};
       new IntersectionObserver(en => { o.vis = en[0].isIntersecting; }).observe(card);
