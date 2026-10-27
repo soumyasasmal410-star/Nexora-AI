@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="theme-color" content="#080b16">
 <title>Your workspace · Nexora AI</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -34,7 +34,7 @@
           <span class="plan-badge">{{ 'PREMIUM' if plan.premium else 'FREE PLAN' }}</span>
           {% if plan.premium %}
             <h2>Premium is active</h2>
-            <p>{{ plan.days_left }} day{{ '' if plan.days_left == 1 else 's' }} left · valid until {{ plan.expires_on }}. Unlimited AI requests with Claude's most capable model.</p>
+            <p>{{ plan.days_left }} day{{ '' if plan.days_left == 1 else 's' }} left · valid until {{ plan.expires_on }}. Unlimited AI requests with the most capable AI model.</p>
           {% else %}
             <h2>{{ plan.remaining_today }} of {{ plan.daily_limit }} AI requests left today</h2>
             <p>Resets every day. Upgrade for unlimited requests and the deeper-thinking model.</p>
