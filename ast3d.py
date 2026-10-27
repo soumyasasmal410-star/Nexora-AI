@@ -8,6 +8,7 @@ app.py (after `limiter = Limiter(...)` and after the premium lines):
     init_ast3d(app, limiter)
 """
 import ast
+import textwrap
 
 from flask import jsonify, request
 
@@ -62,6 +63,25 @@ def _describe(node):
     return None
 
 
+def explain_syntax_error(code, exc):
+    """A friendlier sentence for the most common beginner mistake: pasting from the MIDDLE of a file."""
+    first = next((ln for ln in code.splitlines() if ln.strip()), "")
+    msg = (exc.msg or "").lower()
+    line = exc.lineno or 0
+    if line <= 2 and "indent" in msg and first[:1] in (" ", "\t"):
+        return ("Your code starts with extra indentation, which usually means it was copied from the middle of a file. "
+                "Paste from the first line of the file, or a whole function or class, and try again.")
+    if line <= 2 and (first.count(")") > first.count("(") or first.count("]") > first.count("[") or "unmatched" in msg):
+        return ("Your paste starts in the middle of a statement (a closing bracket has no opening one). "
+                "Include the full line where it begins, or paste a whole function or class.")
+    return f"Fix the syntax error first - line {line or '?'}: {exc.msg}."
+
+
+def too_long_message(n):
+    return (f"Your code is {n:,} characters and the limit is {MAX_CODE:,}. "
+            "Paste one class or function at a time instead of the whole file.")
+
+
 def build_tree(code):
     """Returns (nodes, truncated). Each node: id, p (parent id or -1), t (group), l (label), line."""
     tree = ast.parse(code, filename="<submitted-code>", mode="exec")
@@ -87,13 +107,21 @@ def build_tree(code):
 
 def _view():
     payload = request.get_json(silent=True) or {}
-    code = str(payload.get("code", ""))[:MAX_CODE]
+    raw = str(payload.get("code", ""))
+    if len(raw) > MAX_CODE:
+        return jsonify(ok=False, error=too_long_message(len(raw))), 400
+    code = raw
     if not code.strip():
         return jsonify(ok=False, error="Paste some Python code first."), 400
     try:
-        nodes, truncated = build_tree(code)
+        try:
+            nodes, truncated = build_tree(code)
+        except IndentationError as exc:                      # copied with a left margin? try removing it
+            if (exc.lineno or 0) > 2:
+                raise
+            nodes, truncated = build_tree(textwrap.dedent(code))
     except SyntaxError as exc:
-        return jsonify(ok=False, error=f"Fix the syntax error first - line {exc.lineno or '?'}: {exc.msg}."), 400
+        return jsonify(ok=False, error=explain_syntax_error(code, exc)), 400
     except (RecursionError, MemoryError, ValueError, OverflowError):
         return jsonify(ok=False, error="This code is too complex to draw. Try a smaller snippet."), 400
     return jsonify(ok=True, nodes=nodes, truncated=truncated)
